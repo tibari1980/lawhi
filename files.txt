@@ -1,0 +1,12 @@
+ Le volume dans le lecteur D s'appelle Nouveau nom
+ Le num‚ro de s‚rie du volume est 54CB-450B
+
+ R‚pertoire de D:\antigravity-project\app_tools_muslim
+
+15/03/2026  18:13    <DIR>          .
+11/03/2026  17:53    <DIR>          ..
+15/03/2026  17:51    <DIR>          docs
+15/03/2026  18:13                 0 files.txt
+15/03/2026  17:57                13 test.txt
+               2 fichier(s)               13 octets
+               3 R‚p(s)  199ÿ375ÿ855ÿ616 octets libres
