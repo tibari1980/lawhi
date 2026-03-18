@@ -26,7 +26,7 @@ class CustomErrorView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isNetworkError ? Colors.orange.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                color: isNetworkError ? Colors.orange.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(

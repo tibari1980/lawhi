@@ -3,8 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/settings_provider.dart';
 import '../../core/models/quran_models.dart';
+import '../../core/app_theme.dart';
 
-class MushafPage extends ConsumerWidget {
+import 'dart:ui';
+
+class MushafPage extends ConsumerStatefulWidget {
   final String thumnTitle;
   final List<Ayah> ayahs;
 
@@ -15,57 +18,115 @@ class MushafPage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
-    
-    // Calculate current Hizb and Rub from the first visible Ayah
-    // In a real app, we'd use a ScrollController to track the first visible item
-    // For now, we'll use the first ayah which is usually the start of the page/selection
-    final firstAyah = ayahs.first;
+  ConsumerState<MushafPage> createState() => _MushafPageState();
+}
 
-    return Scaffold(
-      backgroundColor: settings.backgroundColor,
-      body: Stack(
+class _MushafPageState extends ConsumerState<MushafPage> {
+  final ScrollController _scrollController = ScrollController();
+  int _visibleAyahIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // Estimating the visible ayah index based on scroll position
+    // In a more complex app, we'd use a ListView.builder with a listener
+    // But since we use SingleChildScrollView + RichText, we'll use a proportional estimate
+    if (!_scrollController.hasClients) return;
+    
+    double maxScroll = _scrollController.position.maxScrollExtent;
+    double currentScroll = _scrollController.offset;
+    
+    if (maxScroll > 0) {
+      int newIndex = ((currentScroll / maxScroll) * (widget.ayahs.length - 1)).round();
+      if (newIndex != _visibleAyahIndex) {
+        setState(() {
+          _visibleAyahIndex = newIndex;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    final currentAyah = widget.ayahs[_visibleAyahIndex];
+    
+    // Determine Thumun (1 or 2 of the current Rob3)
+    int thumunInRob3 = _visibleAyahIndex < (widget.ayahs.length / 2) ? 1 : 2;
+    int absoluteThumun = currentAyah.thumunBase + (thumunInRob3 - 1);
+
+    return Material(
+      color: settings.backgroundColor,
+      child: Stack(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
             child: Column(
               children: [
-                // Header: Thumn Title
+                // Header: Thumn Title with Premium Decoration
                 Semantics(
                   header: true,
-                  label: 'العنوان: $thumnTitle',
-                  child: Text(
-                    thumnTitle,
-                    style: GoogleFonts.amiri(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: settings.backgroundColor.computeLuminance() > 0.5 
-                          ? Colors.black87 : Colors.white70,
-                    ),
+                  label: 'العنوان: ${widget.thumnTitle}',
+                  child: Column(
+                    children: [
+                      Text(
+                        widget.thumnTitle,
+                        style: GoogleFonts.amiri(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.emeraldGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 100,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppTheme.emeraldGreen.withValues(alpha: 0),
+                              AppTheme.richGold,
+                              AppTheme.emeraldGreen.withValues(alpha: 0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Divider(
-                  thickness: 1, 
-                  color: (settings.backgroundColor.computeLuminance() > 0.5 ? Colors.black : Colors.white).withOpacity(0.1)
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
                 
-                // Body: Verses
+                // Body: Verses with better spacing
                 Expanded(
                   child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(),
                     child: Semantics(
-                      label: 'نص القرآن الكريم',
-                      child: RichText(
-                        textAlign: TextAlign.justify,
-                        textDirection: TextDirection.rtl,
-                        text: TextSpan(
-                          children: _buildVerses(settings),
-                          style: GoogleFonts.amiri(
-                            fontSize: settings.fontSize * 0.9,
-                            height: 2.0,
-                            color: settings.backgroundColor.computeLuminance() > 0.5 
-                                ? Colors.black87 : Colors.white,
+                      label: 'نص القرآن الكريم - ${widget.thumnTitle}',
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 100),
+                        child: RichText(
+                          textAlign: TextAlign.justify,
+                          textDirection: TextDirection.rtl,
+                          text: TextSpan(
+                            children: _buildVerses(settings),
+                            style: GoogleFonts.amiri(
+                              fontSize: settings.fontSize,
+                              height: 2.2,
+                              color: settings.backgroundColor.computeLuminance() > 0.5 
+                                  ? const Color(0xFF1F2937) : Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -76,35 +137,37 @@ class MushafPage extends ConsumerWidget {
             ),
           ),
           
-          // Floating Position Indicator (Premium Look)
+          // Floating Position Indicator (Glassmorphism)
           Positioned(
             bottom: 30,
+            left: 20,
             right: 20,
-            child: Semantics(
-              label: 'المكان الحالي: الحزب ${firstAyah.hizb}, الربع ${firstAyah.rub}',
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.menu_book_rounded, color: Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      'الحزب ${firstAyah.hizb} - الربع ${firstAyah.rub}',
-                      style: GoogleFonts.amiri(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.emeraldGreen.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildIndicatorTag('الحزب ${currentAyah.hizb}', Icons.auto_stories),
+                      _buildIndicatorTag('الربع ${currentAyah.rub}', Icons.grid_view_rounded),
+                      _buildIndicatorTag('الثمن $absoluteThumun', Icons.bookmark_added_rounded),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -114,10 +177,27 @@ class MushafPage extends ConsumerWidget {
     );
   }
 
+  Widget _buildIndicatorTag(String text, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: AppTheme.richGold, size: 16),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: GoogleFonts.amiri(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
   List<TextSpan> _buildVerses(AppSettings settings) {
     List<TextSpan> spans = [];
-    for (int i = 0; i < ayahs.length; i++) {
-      final ayah = ayahs[i];
+    for (int i = 0; i < widget.ayahs.length; i++) {
+      final ayah = widget.ayahs[i];
       spans.add(TextSpan(
         text: '${ayah.text} ',
         semanticsLabel: 'آية ${ayah.numberInSurah}',
@@ -126,9 +206,9 @@ class MushafPage extends ConsumerWidget {
         TextSpan(
           text: ' ﴾${ayah.numberInSurah}﴿ ',
           style: TextStyle(
-            color: Colors.greenAccent,
+            color: AppTheme.richGold,
             fontWeight: FontWeight.bold,
-            fontSize: settings.fontSize * 0.6,
+            fontSize: settings.fontSize * 0.7,
           ),
         ),
       );

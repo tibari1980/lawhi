@@ -36,12 +36,12 @@ class QuickActionsView extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),
                   ],
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
                 ),
                 child: TextField(
                   onChanged: (value) => ref.read(searchQueryProvider.notifier).state = value,
@@ -80,7 +80,7 @@ class QuickActionsView extends ConsumerWidget {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
                           ],
                         ),
                         child: ListTile(
@@ -98,7 +98,7 @@ class QuickActionsView extends ConsumerWidget {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Center(
@@ -137,7 +137,7 @@ class QuickActionsView extends ConsumerWidget {
                     'آخر قراءة',
                     lastRead,
                     Icons.history_rounded,
-                    AppTheme.brandRed,
+                    AppTheme.emeraldGreen,
                     () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MushafView())),
                   ),
                   _buildPremiumActionCard(
@@ -145,7 +145,7 @@ class QuickActionsView extends ConsumerWidget {
                     'المفضلة',
                     '$favoritesCount سور محفوظة',
                     Icons.bookmark_rounded,
-                    AppTheme.brandGreen,
+                    AppTheme.richGold,
                     () {}, // Add navigation to favorites when ready
                   ),
                   _buildPremiumActionCard(
@@ -153,7 +153,7 @@ class QuickActionsView extends ConsumerWidget {
                     'الأذكار',
                     'صباحاً ومساءً',
                     Icons.wb_sunny_rounded,
-                    AppTheme.goldAccent,
+                    Colors.orange,
                     () {},
                   ),
                   _buildPremiumActionCard(
@@ -190,10 +190,10 @@ class QuickActionsView extends ConsumerWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.1), width: 1.5),
+          border: Border.all(color: color.withValues(alpha: 0.1), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.08),
+              color: color.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -206,7 +206,7 @@ class QuickActionsView extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: color, size: 26),
@@ -230,7 +230,7 @@ class QuickActionsView extends ConsumerWidget {
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],

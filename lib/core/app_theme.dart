@@ -2,35 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Stitch Design: Lawhi-app
+  // Design: Al-Quran As-Siraj
   // Custom Color: #F2B90D (Gold)
   // Roundness: 12.0 (ROUND_TWELVE)
   // Font: Inter
 
-  static const Color goldAccent = Color(0xFFF2B90D);
-  static const Color brandRed = Color(0xFFC62828);
-  static const Color brandGreen = Color(0xFF2E7D32);
-  static const double borderRadius = 12.0;
+  static const Color emeraldGreen = Color(0xFF064E3B);
+  static const Color richGold = Color(0xFFD97706);
+  static const Color creamWhite = Color(0xFFFFFBEB);
+  static const double borderRadius = 16.0;
 
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: goldAccent,
-        primary: goldAccent,
-        secondary: brandGreen,
-        tertiary: brandRed,
-        surface: Colors.white,
+        seedColor: emeraldGreen,
+        primary: emeraldGreen,
+        secondary: richGold,
+        onPrimary: Colors.white,
+        surface: creamWhite,
+        onSurface: Color(0xFF1F2937),
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: brandRed,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Color(0xFF1F2937),
         centerTitle: true,
+        elevation: 0,
       ),
-      textTheme: GoogleFonts.interTextTheme(),
+      textTheme: GoogleFonts.outfitTextTheme(),
       cardTheme: CardThemeData(
+        elevation: 0,
+        color: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
+          side: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
         ),
       ),
     );
@@ -42,22 +47,25 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
         brightness: Brightness.dark,
-        seedColor: goldAccent,
-        primary: goldAccent,
-        secondary: brandGreen,
-        tertiary: brandRed,
-        surface: const Color(0xFF121212),
+        seedColor: emeraldGreen,
+        primary: emeraldGreen,
+        secondary: richGold,
+        surface: const Color(0xFF020617),
         onSurface: Colors.white,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: brandRed,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         centerTitle: true,
+        elevation: 0,
       ),
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       cardTheme: CardThemeData(
+        elevation: 0,
+        color: const Color(0xFF0F172A),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
       ),
     );

@@ -32,25 +32,22 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: LawhiApp(),
+      child: SirajApp(),
     ),
   );
 }
 
-
-
-
-class LawhiApp extends ConsumerWidget {
-  const LawhiApp({super.key});
+class SirajApp extends ConsumerWidget {
+  const SirajApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Lawhi',
+      title: 'القرآن السراج',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light, // Using Light mode for the colorful red/green look
+      themeMode: ThemeMode.light,
       home: const SplashScreenEntry(),
     );
   }
@@ -111,7 +108,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         leading: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.settings_outlined, size: 28, color: Colors.blue),
+              icon: const Icon(Icons.settings_outlined, size: 28, color: Color(0xFF10B981)),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const SettingsView()),
@@ -119,7 +116,7 @@ class _MainScaffoldState extends State<MainScaffold> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.menu_book_outlined, size: 28, color: Colors.blue),
+              icon: const Icon(Icons.menu_book_rounded, size: 28, color: Color(0xFF10B981)),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const MushafView()),
@@ -128,22 +125,20 @@ class _MainScaffoldState extends State<MainScaffold> {
             ),
           ],
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            const Icon(Icons.edit, size: 20, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text(
-              'رواية ورش',
-              style: GoogleFonts.amiri(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
-            ),
-          ],
+        title: Text(
+          'القرآن السراج',
+          style: GoogleFonts.amiri(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF064E3B),
+          ),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Divider(height: 1, color: Colors.black.withValues(alpha: 0.1)),
+          child: Divider(height: 1, color: Colors.black.withValues(alpha: 0.05)),
         ),
       ),
       body: IndexedStack(
@@ -151,16 +146,23 @@ class _MainScaffoldState extends State<MainScaffold> {
         children: _pages,
       ),
       bottomNavigationBar: Container(
-        height: 80,
-        decoration: const BoxDecoration(
-          color: AppTheme.brandRed,
+        height: 85,
+        decoration: BoxDecoration(
+          color: AppTheme.emeraldGreen,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            )
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildCustomNavItem(0, Icons.format_list_bulleted, 'الأحزاب', '60'),
-            _buildCustomNavItem(1, Icons.menu_book, 'السور', '114'),
-            _buildCustomNavItem(2, Icons.search, 'البحث', ''),
+            _buildCustomNavItem(0, Icons.format_list_bulleted_rounded, 'الأحزاب', '60'),
+            _buildCustomNavItem(1, Icons.menu_book_rounded, 'السور', '114'),
+            _buildCustomNavItem(2, Icons.search_rounded, 'البحث', ''),
           ],
         ),
       ),

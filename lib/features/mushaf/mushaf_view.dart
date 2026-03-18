@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'mushaf_page.dart';
 import '../settings/settings_view.dart';
 import '../../core/quran_provider.dart';
-import '../../core/models/quran_models.dart';
 
 class MushafView extends ConsumerStatefulWidget {
   const MushafView({super.key});
@@ -14,9 +13,15 @@ class MushafView extends ConsumerStatefulWidget {
 }
 
 class _MushafViewState extends ConsumerState<MushafView> {
-  final PageController _pageController = PageController();
-  int _currentHizb = 1;
-  int _currentIndex = 0;
+  late PageController _pageController;
+  int _currentThumun = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentThumun = ref.read(currentThumunIndexProvider);
+    _pageController = PageController(initialPage: _currentThumun - 1);
+  }
 
   @override
   void dispose() {
@@ -28,7 +33,10 @@ class _MushafViewState extends ConsumerState<MushafView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final hizbAyahsAsync = ref.watch(hizbAyahsProvider(_currentHizb));
+    
+    // Calculate Hizb and Rub for display
+    final currentHizb = ((_currentThumun - 1) / 8).floor() + 1;
+    final currentRubInHizb = (((_currentThumun - 1) % 8) / 2).floor() + 1;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -52,35 +60,30 @@ class _MushafViewState extends ConsumerState<MushafView> {
           ),
         ],
       ),
-      body: hizbAyahsAsync.when(
-        data: (ayahs) {
-          // Group ayahs by Hizb Quarter (Rub)
-          final Map<int, List<Ayah>> quarters = {};
-          for (var ayah in ayahs) {
-            quarters.putIfAbsent(ayah.hizbQuarter, () => []).add(ayah);
-          }
-          final quarterList = quarters.values.toList();
-
-          return PageView.builder(
-            controller: _pageController,
-            itemCount: quarterList.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              final quarterAyahs = quarterList[index];
-              final firstAyah = quarterAyahs.first;
-              return MushafPage(
-                thumnTitle: 'الحزب ${_currentHizb} - الربع ${firstAyah.rub}',
-                ayahs: quarterAyahs,
-              );
-            },
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: 480,
+        onPageChanged: (index) {
+          setState(() {
+            _currentThumun = index + 1;
+          });
+          ref.read(currentThumunIndexProvider.notifier).state = _currentThumun;
+        },
+        itemBuilder: (context, index) {
+          final thumunIdx = index + 1;
+          final thumunAyahsAsync = ref.watch(thumunAyahsProvider(thumunIdx));
+          
+          return thumunAyahsAsync.when(
+            data: (ayahs) => MushafPage(
+              thumnTitle: 'الحزب $currentHizb - الربع $currentRubInHizb',
+              ayahs: ayahs,
+            ),
+            loading: () => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            error: (err, stack) => Center(child: Text('Error: $err')),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
       bottomNavigationBar: BottomAppBar(
         color: colorScheme.surfaceContainer,
@@ -91,18 +94,13 @@ class _MushafViewState extends ConsumerState<MushafView> {
           children: [
             IconButton(
               icon: Icon(Icons.arrow_back_ios, 
-                color: _currentIndex > 0 || _currentHizb > 1 ? colorScheme.primary : Colors.grey),
+                color: _currentThumun > 1 ? colorScheme.primary : Colors.grey),
               onPressed: () {
-                if (_currentIndex > 0) {
+                if (_currentThumun > 1) {
                   _pageController.previousPage(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                   );
-                } else if (_currentHizb > 1) {
-                  setState(() {
-                    _currentHizb--;
-                    _currentIndex = 3; // Go to last quarter of previous hizb
-                  });
                 }
               },
             ),
@@ -110,7 +108,7 @@ class _MushafViewState extends ConsumerState<MushafView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'الحزب $_currentHizb',
+                  'الحزب $currentHizb',
                   style: GoogleFonts.amiri(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -118,7 +116,7 @@ class _MushafViewState extends ConsumerState<MushafView> {
                   ),
                 ),
                 Text(
-                  'الربع ${_currentIndex + 1}',
+                  'الثمن ${_currentThumun % 8 == 0 ? 8 : _currentThumun % 8}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: colorScheme.onSurfaceVariant,
@@ -128,26 +126,13 @@ class _MushafViewState extends ConsumerState<MushafView> {
             ),
             IconButton(
               icon: Icon(Icons.arrow_forward_ios, 
-                color: _currentHizb < 60 ? colorScheme.primary : Colors.grey),
+                color: _currentThumun < 480 ? colorScheme.primary : Colors.grey),
               onPressed: () {
-                // Determine if we have next quarter in current hizb
-                final hizbData = ref.read(hizbAyahsProvider(_currentHizb)).asData;
-                if (hizbData != null) {
-                  final Map<int, List<Ayah>> quarters = {};
-                  for (var ayah in hizbData.value) {
-                    quarters.putIfAbsent(ayah.hizbQuarter, () => []).add(ayah);
-                  }
-                  if (_currentIndex < quarters.length - 1) {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  } else if (_currentHizb < 60) {
-                    setState(() {
-                      _currentHizb++;
-                      _currentIndex = 0;
-                    });
-                  }
+                if (_currentThumun < 480) {
+                  _pageController.nextPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
                 }
               },
             ),

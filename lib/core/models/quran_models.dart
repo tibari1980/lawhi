@@ -53,9 +53,12 @@ class Ayah {
   // Helper getters for navigation
   int get hizb => ((hizbQuarter - 1) / 4).floor() + 1;
   int get rub => ((hizbQuarter - 1) % 4) + 1;
-  // In Warsh tradition, Rub is divided into 2 Thumuns.
-  // Since we only have Quarter info from API, we'll label Quarters as "Quart/Rub" 
-  // and mention it's 2 Thumuns.
+  // In Warsh tradition: 1 Hizb = 8 Thumuns = 4 Rob3s.
+  // 1 Rob3 = 2 Thumuns.
+  // Since the API only gives hizbQuarter (which are Quarters/Rob3s),
+  // we'll calculate the base Thumun (1-8) for each Hizb.
+  int get thumunBase => ((hizbQuarter - 1) % 4) * 2 + 1;
+  int get globalThumun => (hizbQuarter - 1) * 2 + 1;
 
   factory Ayah.fromJson(Map<String, dynamic> json) {
     return Ayah(

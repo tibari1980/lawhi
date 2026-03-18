@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/quran_provider.dart';
-import '../../core/widgets/error_view.dart';
-import '../mushaf/mushaf_page.dart';
+import '../mushaf/mushaf_view.dart';
 import '../../core/settings_provider.dart';
 
 class AhzabView extends ConsumerWidget {
@@ -55,10 +54,12 @@ class _HizbCard extends ConsumerWidget {
       ),
       child: InkWell(
         onTap: () {
+          final firstThumunOfHizb = (hizbNumber - 1) * 8 + 1;
+          ref.read(currentThumunIndexProvider.notifier).state = firstThumunOfHizb;
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => HizbViewWithData(hizbNumber: hizbNumber),
+              builder: (context) => const MushafView(),
             ),
           );
         },
@@ -145,41 +146,6 @@ class _HizbCard extends ConsumerWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class HizbViewWithData extends ConsumerWidget {
-  final int hizbNumber;
-
-  const HizbViewWithData({
-    super.key,
-    required this.hizbNumber,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ayahsAsyncValue = ref.watch(hizbAyahsProvider(hizbNumber));
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('الحزب $hizbNumber', style: GoogleFonts.amiri()),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-      ),
-      body: ayahsAsyncValue.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: Colors.red)),
-        error: (err, stack) => CustomErrorView(
-          title: 'فشل تحميل الحزب',
-          message: 'حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة لاحقاً.',
-          onRetry: () => ref.refresh(hizbAyahsProvider(hizbNumber)),
-        ),
-        data: (ayahs) => MushafPage(
-          thumnTitle: 'الحزب $hizbNumber',
-          ayahs: ayahs,
         ),
       ),
     );

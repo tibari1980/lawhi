@@ -24,7 +24,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
           style: GoogleFonts.amiri(fontWeight: FontWeight.bold, fontSize: 24),
         ),
         centerTitle: true,
-        backgroundColor: AppTheme.brandRed,
+        backgroundColor: AppTheme.emeraldGreen,
         foregroundColor: Colors.white,
       ),
       body: ListView(
