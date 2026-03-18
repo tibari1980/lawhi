@@ -42,7 +42,7 @@ class _MushafViewState extends ConsumerState<MushafView> {
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: Text(
-          'المصحف - لوح مروكي',
+          'القرآن السراج',
           style: GoogleFonts.amiri(fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
@@ -64,10 +64,16 @@ class _MushafViewState extends ConsumerState<MushafView> {
         controller: _pageController,
         itemCount: 480,
         onPageChanged: (index) {
+          final thumun = index + 1;
           setState(() {
-            _currentThumun = index + 1;
+            _currentThumun = thumun;
           });
-          ref.read(currentThumunIndexProvider.notifier).state = _currentThumun;
+          ref.read(currentThumunIndexProvider.notifier).state = thumun;
+          
+          // Update last read info
+          final hizb = ((thumun - 1) / 8).floor() + 1;
+          final rub = (((thumun - 1) % 8) / 2).floor() + 1;
+          ref.read(lastReadProvider.notifier).state = 'الحزب $hizb • ربع $rub';
         },
         itemBuilder: (context, index) {
           final thumunIdx = index + 1;

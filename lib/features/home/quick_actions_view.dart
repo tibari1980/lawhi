@@ -66,8 +66,26 @@ class QuickActionsView extends ConsumerWidget {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, s) => Center(child: Text('Error: $e')),
                 data: (surahs) {
-                  final filtered = surahs.where((s) => s.name.contains(query) || s.englishName.toLowerCase().contains(query.toLowerCase())).toList();
-                  if (filtered.isEmpty) return Center(child: Text('لا توجد نتائج', style: GoogleFonts.amiri(fontSize: 18)));
+                  final normalizedQuery = _normalizeArabic(query.toLowerCase());
+                  final filtered = surahs.where((s) {
+                    final normalizedName = _normalizeArabic(s.name);
+                    final normalizedEnglish = s.englishName.toLowerCase();
+                    return normalizedName.contains(normalizedQuery) || 
+                           normalizedEnglish.contains(normalizedQuery);
+                  }).toList();
+                  
+                  if (filtered.isEmpty) {
+                    return Center(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 32),
+                          Icon(Icons.search_off_rounded, size: 48, color: theme.colorScheme.outline),
+                          const SizedBox(height: 16),
+                          Text('لا توجد نتائج', style: GoogleFonts.amiri(fontSize: 18, color: theme.colorScheme.outline)),
+                        ],
+                      ),
+                    );
+                  }
                   return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -173,6 +191,14 @@ class QuickActionsView extends ConsumerWidget {
     );
   }
 
+  String _normalizeArabic(String text) {
+    return text
+        .replaceAll(RegExp(r'[\u064B-\u065F]'), '') // Remove diacritics
+        .replaceAll(RegExp(r'[أإآ]'), 'ا')           // Normalize Alef
+        .replaceAll('ة', 'ه')                        // Normalize Teh Marbuta
+        .replaceAll('ى', 'ي');                       // Normalize Yeh
+  }
+
   Widget _buildPremiumActionCard(
     BuildContext context, 
     String title, 
@@ -182,60 +208,80 @@ class QuickActionsView extends ConsumerWidget {
     VoidCallback onTap,
   ) {
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.1), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: color, size: 26),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.amiri(
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
+    return Semantics(
+      button: true,
+      label: '$title: $subtitle',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                theme.colorScheme.surface,
+                color.withValues(alpha: 0.03),
               ],
             ),
-          ],
+            border: Border.all(color: color.withValues(alpha: 0.15), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      spreadRadius: -2,
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.amiri(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -37,13 +37,6 @@ final thumunAyahsProvider = FutureProvider.family<List<Ayah>, int>((ref, thumunI
   return isFirstThumun ? ayahs.sublist(0, midPoint) : ayahs.sublist(midPoint);
 });
 
-final hizbAyahsProvider = FutureProvider.family<List<Ayah>, int>((ref, hizbNumber) async {
-  final startQuarter = (hizbNumber - 1) * 4 + 1;
-  final quarterFutures = List.generate(4, (i) => ref.watch(hizbQuarterAyahsProvider(startQuarter + i).future));
-  final quarters = await Future.wait(quarterFutures);
-  return quarters.expand((q) => q).toList();
-});
-
 final hizbFirstAyahProvider = FutureProvider.family<Ayah, int>((ref, hizbNumber) async {
   final startQuarter = (hizbNumber - 1) * 4 + 1;
   final ayahs = await ref.watch(hizbQuarterAyahsProvider(startQuarter).future);
