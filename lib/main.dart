@@ -6,6 +6,10 @@ import 'core/app_theme.dart';
 import 'core/firebase_options.dart' as manual;
 import 'features/splash_screen.dart';
 import 'features/mushaf/mushaf_view.dart';
+import 'features/ahzab/ahzab_view.dart';
+import 'features/suwar/suwar_view.dart';
+import 'features/home/quick_actions_view.dart';
+import 'features/settings/settings_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +39,7 @@ void main() async {
 
 
 
+
 class LawhiApp extends ConsumerWidget {
   const LawhiApp({super.key});
 
@@ -45,6 +50,7 @@ class LawhiApp extends ConsumerWidget {
       title: 'Lawhi',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light, // Using Light mode for the colorful red/green look
       home: const SplashScreenEntry(),
     );
   }
@@ -64,7 +70,7 @@ class _SplashScreenEntryState extends State<SplashScreenEntry> {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (context) => const MainScaffold()),
         );
       }
     });
@@ -76,153 +82,154 @@ class _SplashScreenEntryState extends State<SplashScreenEntry> {
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class MainScaffold extends StatefulWidget {
+  const MainScaffold({super.key});
+
+  @override
+  State<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends State<MainScaffold> {
+  int _currentIndex = 1; // Start with Suwar (Middle)
+
+  final List<Widget> _pages = const [
+    AhzabView(),
+    SuwarView(),
+    QuickActionsView(),
+  ];
+
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FBE7),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text(
-          'LAWHI',
-          style: GoogleFonts.inter(letterSpacing: 2, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        leadingWidth: 100,
+        leading: Row(
           children: [
-            _buildGreeting(),
-            const SizedBox(height: 30),
-            _buildQuickAccessGrid(context),
-            const SizedBox(height: 30),
-            _buildLastReadCard(context),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openMushaf(context),
-        label: const Text('Ouvrir le Mushaf'),
-        icon: const Icon(Icons.menu_book),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildGreeting() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Assalamu Alaikum,',
-          style: GoogleFonts.inter(fontSize: 18, color: Colors.black54),
-        ),
-        Text(
-          'Prêt pour votre Hifz ?',
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF2E7D32),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickAccessGrid(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 15,
-      crossAxisSpacing: 15,
-      children: [
-        _buildMarkerCard(context, 'Hifz', 'حفظ', Icons.auto_stories, Colors.green),
-        _buildMarkerCard(context, 'Murajaa', 'مراجعة', Icons.rebase_edit, Colors.orange),
-        _buildMarkerCard(context, 'Tilawa', 'تلاوة', Icons.menu_book, Colors.blue),
-        _buildMarkerCard(context, 'Browsing', 'تصفح', Icons.explore, Colors.purple),
-      ],
-    );
-  }
-
-  Widget _buildMarkerCard(
-    BuildContext context,
-    String title,
-    String arabicTitle,
-    IconData icon,
-    Color color,
-  ) {
-    return InkWell(
-      onTap: () => _openMushaf(context),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            )
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, size: 28, color: Colors.blue),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SettingsView()),
+                );
+              },
             ),
-            Text(arabicTitle, style: GoogleFonts.amiri(fontSize: 18, color: color)),
+            IconButton(
+              icon: const Icon(Icons.menu_book_outlined, size: 28, color: Colors.blue),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const MushafView()),
+                );
+              },
+            ),
+          ],
+        ),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            const Icon(Icons.edit, size: 20, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(
+              'رواية ورش',
+              style: GoogleFonts.amiri(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: Colors.black.withValues(alpha: 0.1)),
+        ),
+      ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: Container(
+        height: 80,
+        decoration: const BoxDecoration(
+          color: AppTheme.brandRed,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildCustomNavItem(0, Icons.format_list_bulleted, 'الأحزاب', '60'),
+            _buildCustomNavItem(1, Icons.menu_book, 'السور', '114'),
+            _buildCustomNavItem(2, Icons.search, 'البحث', ''),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLastReadCard(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF2E7D32), Color(0xFF43A047)]),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Dernière lecture',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 5),
-          const Text(
-            'Sourate Al-Baqarah',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const Text('Thumn 2 - Hizb 1', style: TextStyle(color: Colors.white, fontSize: 16)),
-          const SizedBox(height: 15),
-          const LinearProgressIndicator(
-            value: 0.2,
-            backgroundColor: Colors.white24,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-          ),
-        ],
+  Widget _buildCustomNavItem(int index, IconData icon, String label, String badge) {
+    bool isSelected = _currentIndex == index;
+    String semanticLabel = label;
+    if (badge.isNotEmpty) {
+      semanticLabel += ', $badge elements';
+    }
+    if (isSelected) {
+      semanticLabel += ', Selected';
+    }
+
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      selected: isSelected,
+      child: InkWell(
+        onTap: () => setState(() => _currentIndex = index),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: 32, color: isSelected ? Colors.white : Colors.white70),
+                if (badge.isNotEmpty)
+                  Positioned(
+                    top: -5,
+                    right: -10,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            Text(
+              label,
+              style: GoogleFonts.amiri(
+                fontSize: 14,
+                color: isSelected ? Colors.white : Colors.white70,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-  void _openMushaf(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MushafView()));
+class MushafViewEntry extends StatelessWidget {
+  const MushafViewEntry({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MushafView();
   }
 }
 

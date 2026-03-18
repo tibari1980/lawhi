@@ -2,16 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  // Stitch Design: Lawhi-app
+  // Custom Color: #F2B90D (Gold)
+  // Roundness: 12.0 (ROUND_TWELVE)
+  // Font: Inter
+
+  static const Color goldAccent = Color(0xFFF2B90D);
+  static const Color brandRed = Color(0xFFC62828);
+  static const Color brandGreen = Color(0xFF2E7D32);
+  static const double borderRadius = 12.0;
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFFF5F5DC), // Beige/Cream base
-        primary: const Color(0xFF2E7D32), // Deep Green
-        secondary: const Color(0xFFFFCC80), // Pastel Orange
-        surface: const Color(0xFFF9FBE7), // Light Pastel Green
+        seedColor: goldAccent,
+        primary: goldAccent,
+        secondary: brandGreen,
+        tertiary: brandRed,
+        surface: Colors.white,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: brandRed,
+        foregroundColor: Colors.white,
+        centerTitle: true,
       ),
       textTheme: GoogleFonts.interTextTheme(),
+      cardTheme: CardThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
     );
   }
 
@@ -19,8 +40,26 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      colorSchemeSeed: const Color(0xFF1B5E20),
+      colorScheme: ColorScheme.fromSeed(
+        brightness: Brightness.dark,
+        seedColor: goldAccent,
+        primary: goldAccent,
+        secondary: brandGreen,
+        tertiary: brandRed,
+        surface: const Color(0xFF121212),
+        onSurface: Colors.white,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: brandRed,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+      ),
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      cardTheme: CardThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
     );
   }
 

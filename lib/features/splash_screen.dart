@@ -31,8 +31,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FBE7),
+      backgroundColor: colorScheme.surface,
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: Center(
@@ -44,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 style: GoogleFonts.amiri(
                   fontSize: 72,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2E7D32),
+                  color: colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -54,12 +57,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   fontSize: 24,
                   fontWeight: FontWeight.w300,
                   letterSpacing: 4,
-                  color: Colors.black54,
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 50),
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2E7D32)),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
               ),
             ],
           ),
