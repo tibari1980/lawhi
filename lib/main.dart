@@ -9,6 +9,7 @@ import 'features/mushaf/mushaf_view.dart';
 import 'features/ahzab/ahzab_view.dart';
 import 'features/suwar/suwar_view.dart';
 import 'features/home/quick_actions_view.dart';
+import 'features/home/home_view.dart';
 import 'features/settings/settings_view.dart';
 
 void main() async {
@@ -87,12 +88,14 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  int _currentIndex = 1; // Start with Suwar (Middle)
+  int _currentIndex = 0; // Start with Home
 
   final List<Widget> _pages = const [
-    AhzabView(),
+    HomeView(),
     SuwarView(),
+    AhzabView(),
     QuickActionsView(),
+    SettingsView(),
   ];
 
 
@@ -103,32 +106,11 @@ class _MainScaffoldState extends State<MainScaffold> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        leadingWidth: 100,
-        leading: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.settings_outlined, size: 28, color: Color(0xFF10B981)),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SettingsView()),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.menu_book_rounded, size: 28, color: Color(0xFF10B981)),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const MushafView()),
-                );
-              },
-            ),
-          ],
-        ),
+      appBar: _currentIndex == 0 ? null : AppBar(
         title: Text(
           'القرآن السراج',
           style: GoogleFonts.amiri(
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: const Color(0xFF064E3B),
           ),
@@ -136,6 +118,16 @@ class _MainScaffoldState extends State<MainScaffold> {
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu_book_rounded, color: AppTheme.emeraldGreen),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const MushafView()),
+              );
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Divider(height: 1, color: Colors.black.withValues(alpha: 0.05)),
@@ -160,9 +152,11 @@ class _MainScaffoldState extends State<MainScaffold> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildCustomNavItem(0, Icons.format_list_bulleted_rounded, 'الأحزاب', '60'),
+            _buildCustomNavItem(0, Icons.home_rounded, 'الرئيسية', ''),
             _buildCustomNavItem(1, Icons.menu_book_rounded, 'السور', '114'),
-            _buildCustomNavItem(2, Icons.search_rounded, 'البحث', ''),
+            _buildCustomNavItem(2, Icons.format_list_bulleted_rounded, 'الأحزاب', '60'),
+            _buildCustomNavItem(3, Icons.search_rounded, 'البحث', ''),
+            _buildCustomNavItem(4, Icons.settings_rounded, 'الإعدادات', ''),
           ],
         ),
       ),
