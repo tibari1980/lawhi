@@ -1,3 +1,5 @@
+enum Riwaya { warsh, hafs }
+
 class Surah {
   final int number;
   final String name;
@@ -25,53 +27,100 @@ class Surah {
       revelationType: json['revelationType'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'number': number,
+      'name': name,
+      'englishName': englishName,
+      'englishNameTranslation': englishNameTranslation,
+      'numberOfAyahs': numberOfAyahs,
+      'revelationType': revelationType,
+    };
+  }
 }
 
 class Ayah {
   final int number;
   final String text;
+  final String? translation;
+  final String? phonetics;
   final int numberInSurah;
   final int juz;
   final int manzil;
   final int page;
   final int ruku;
   final int hizbQuarter;
-  final int? sajda; // Some ayahs have sajda info
+  final int surahNumber;
+  final String surahName;
+  final int? sajda;
 
   Ayah({
     required this.number,
     required this.text,
+    this.translation,
+    this.phonetics,
     required this.numberInSurah,
     required this.juz,
     required this.manzil,
     required this.page,
     required this.ruku,
     required this.hizbQuarter,
+    required this.surahNumber,
+    required this.surahName,
     this.sajda,
   });
 
   // Helper getters for navigation
   int get hizb => ((hizbQuarter - 1) / 4).floor() + 1;
   int get rub => ((hizbQuarter - 1) % 4) + 1;
-  // In Warsh tradition: 1 Hizb = 8 Thumuns = 4 Rob3s.
-  // 1 Rob3 = 2 Thumuns.
-  // Since the API only gives hizbQuarter (which are Quarters/Rob3s),
-  // we'll calculate the base Thumun (1-8) for each Hizb.
   int get thumunBase => ((hizbQuarter - 1) % 4) * 2 + 1;
-  int get globalThumun => (hizbQuarter - 1) * 2 + 1;
+  int get baseThumun => (hizbQuarter - 1) * 2 + 1;
+  int get globalThumun => baseThumun;
 
-  factory Ayah.fromJson(Map<String, dynamic> json) {
+  int getThumunIndex(List<Ayah> quarterAyahs) {
+    final idx = quarterAyahs.indexWhere((a) => a.number == number);
+    if (idx == -1) return baseThumun;
+    final midPoint = (quarterAyahs.length / 2).floor();
+    return idx < midPoint ? baseThumun : baseThumun + 1;
+  }
+
+  factory Ayah.fromJson(Map<String, dynamic> json, {String? translation, String? phonetics}) {
     return Ayah(
       number: json['number'],
       text: json['text'],
+      translation: translation ?? json['translation'],
+      phonetics: phonetics ?? json['phonetics'],
       numberInSurah: json['numberInSurah'],
       juz: json['juz'],
       manzil: json['manzil'],
       page: json['page'],
       ruku: json['ruku'],
       hizbQuarter: json['hizbQuarter'],
-      sajda: json['sajda'] is Map ? json['sajda']['id'] : null,
+      surahNumber: json['surahNumber'] ?? (json['surah'] != null ? json['surah']['number'] : 0),
+      surahName: json['surahName'] ?? (json['surah'] != null ? json['surah']['name'] : ''),
+      sajda: json['sajda'] is Map 
+          ? json['sajda']['id'] 
+          : (json['sajda'] is bool ? (json['sajda'] ? 1 : 0) : json['sajda']),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'number': number,
+      'text': text,
+      'translation': translation,
+      'phonetics': phonetics,
+      'numberInSurah': numberInSurah,
+      'juz': juz,
+      'manzil': manzil,
+      'page': page,
+      'ruku': ruku,
+      'hizbQuarter': hizbQuarter,
+      'surahNumber': surahNumber,
+      'surahName': surahName,
+      'sajda': sajda,
+    };
   }
 }
 

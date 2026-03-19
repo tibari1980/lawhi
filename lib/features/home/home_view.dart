@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_theme.dart';
 import '../../core/quran_provider.dart';
+import '../../core/navigation_provider.dart';
 import '../mushaf/mushaf_view.dart';
 
 class HomeView extends ConsumerWidget {
@@ -159,6 +161,10 @@ class HomeView extends ConsumerWidget {
                           'تصفح السور',
                           Icons.format_list_bulleted_rounded,
                           const Color(0xFF10B981),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(navigationProvider.notifier).state = 1; // Suwar
+                          },
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -169,6 +175,10 @@ class HomeView extends ConsumerWidget {
                           'تصفح الأجزاء',
                           Icons.layers_rounded,
                           const Color(0xFF6366F1),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(navigationProvider.notifier).state = 2; // Ahzab
+                          },
                         ),
                       ),
                     ],
@@ -183,6 +193,10 @@ class HomeView extends ConsumerWidget {
                           'ابحث عن آية',
                           Icons.search_rounded,
                           const Color(0xFFF59E0B),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(navigationProvider.notifier).state = 3; // Search
+                          },
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -193,6 +207,10 @@ class HomeView extends ConsumerWidget {
                           'تخصيص التطبيق',
                           Icons.settings_outlined,
                           const Color(0xFF6B7280),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref.read(navigationProvider.notifier).state = 4; // Settings
+                          },
                         ),
                       ),
                     ],
@@ -272,49 +290,53 @@ class HomeView extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionCard(BuildContext context, String title, String subtitle, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+  Widget _buildSectionCard(BuildContext context, String title, String subtitle, IconData icon, Color color, {required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: GoogleFonts.amiri(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1F2937),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
-          Text(
-            subtitle,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Colors.grey[500],
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: GoogleFonts.amiri(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1F2937),
+              ),
             ),
-          ),
-        ],
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
