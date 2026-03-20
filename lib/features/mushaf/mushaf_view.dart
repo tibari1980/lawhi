@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'mushaf_page.dart';
 import 'widgets/riwaya_selection_dialog.dart';
 import '../settings/settings_view.dart';
@@ -11,6 +10,7 @@ import '../../core/widgets/siraaj_error_view.dart';
 import '../../core/settings_provider.dart';
 import '../../core/app_theme.dart';
 import '../../core/models/quran_models.dart';
+import '../../core/user_progress_provider.dart';
 
 class MushafView extends ConsumerStatefulWidget {
   const MushafView({super.key});
@@ -22,17 +22,64 @@ class MushafView extends ConsumerStatefulWidget {
 class _MushafViewState extends ConsumerState<MushafView> {
   late PageController _pageController;
   int _currentThumun = 1;
+  dynamic _audioSyncSubscription;
 
   @override
   void initState() {
     super.initState();
+    
+    // Determine initial page
     _currentThumun = ref.read(currentThumunIndexProvider);
     _pageController = PageController(initialPage: _currentThumun - 1);
+
+    // Listen for manual navigation targets (from SuwarView/Search)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.listenManual(targetAyahGlobalNumberProvider, (previous, next) async {
+        if (next != null) {
+          final ayah = await ref.read(quranServiceProvider).getAyahByGlobalNumber(next);
+          if (!mounted) return;
+          if (ayah != null) {
+            final quarterAyahs = await ref.read(hizbQuarterAyahsProvider(ayah.hizbQuarter).future);
+            if (!mounted) return;
+            final thumunIndex = ayah.getThumunIndex(quarterAyahs);
+            
+            if (thumunIndex != _currentThumun) {
+              _currentThumun = thumunIndex;
+              _pageController.jumpToPage(thumunIndex - 1);
+            }
+          }
+        }
+      }, fireImmediately: true);
+    });
+
+    // Continuous sync with audio
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _audioSyncSubscription = ref.listenManual(currentPlayingAyahProvider, (previous, next) async {
+        if (next != null) {
+          // Find the thumun of this ayah
+          final quarterAyahs = await ref.read(hizbQuarterAyahsProvider(next.hizbQuarter).future);
+          if (!mounted) return;
+          final thumunIndex = next.getThumunIndex(quarterAyahs);
+          
+          if (thumunIndex != _currentThumun) {
+            _currentThumun = thumunIndex;
+            _pageController.animateToPage(
+              thumunIndex - 1,
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeInOut,
+            );
+          }
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _audioSyncSubscription?.close();
     super.dispose();
   }
 
@@ -60,7 +107,7 @@ class _MushafViewState extends ConsumerState<MushafView> {
                     final name = surah?.name ?? 'القرآن الكريم';
                     return Text(
                       name,
-                      style: GoogleFonts.amiri(
+                      style: const TextStyle(fontFamily: 'Amiri',
                         fontWeight: FontWeight.bold,
                         color: AppTheme.emeraldGreen,
                         fontSize: 22,
@@ -72,7 +119,7 @@ class _MushafViewState extends ConsumerState<MushafView> {
             )
           : Text(
               'القرآن السراج',
-              style: GoogleFonts.amiri(
+              style: TextStyle(fontFamily: 'Amiri',
                 fontWeight: FontWeight.bold,
                 color: contentColor,
               ),
@@ -109,19 +156,31 @@ class _MushafViewState extends ConsumerState<MushafView> {
           });
           ref.read(currentThumunIndexProvider.notifier).state = thumun;
           
+          // Update persistent progress (local Firestore cache + Online sync)
+          ref.read(userProgressProvider.notifier).updateLastRead(thumun);
+          
           // Update last read info dynamicly with Surah and Ayah
-          final ayahs = await ref.read(thumunAyahsProvider(thumun).future);
-          if (ayahs.isNotEmpty) {
-            final firstAyah = ayahs.first;
-            ref.read(lastReadProvider.notifier).state = '${firstAyah.surahName} • آية ${firstAyah.numberInSurah}';
+          try {
+            final ayahs = await ref.read(thumunAyahsProvider(thumun).future);
+            if (!mounted) return;
             
-            // Announcement for screen readers
-            SemanticsService.announce(
-              'أنت الآن في ${firstAyah.surahName}، آية ${firstAyah.numberInSurah}', 
-              TextDirection.rtl
-            );
+            if (ayahs.isNotEmpty) {
+              final firstAyah = ayahs.first;
+              ref.read(lastReadProvider.notifier).state = '${firstAyah.surahName} • آية ${firstAyah.numberInSurah}';
+              
+              if (context.mounted) {
+                // Announcement for screen readers
+                SemanticsService.sendAnnouncement(
+                  View.of(context),
+                  'أنت الآن في ${firstAyah.surahName}، آية ${firstAyah.numberInSurah}', 
+                  TextDirection.rtl
+                );
+              }
+            }
+          } catch (e) {
+            debugPrint('Error updating progress: $e');
           }
-          HapticFeedback.selectionClick();
+          if (mounted) HapticFeedback.selectionClick();
         },
         itemBuilder: (context, index) {
           final thumunIdx = index + 1;
@@ -134,6 +193,7 @@ class _MushafViewState extends ConsumerState<MushafView> {
               return MushafPage(
                 thumnTitle: 'الحزب $hizb - الربع $rub',
                 ayahs: ayahs,
+                thumunIndex: thumunIdx,
               );
             },
             loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
@@ -173,7 +233,7 @@ class _MushafViewState extends ConsumerState<MushafView> {
                   label: 'الحزب $hizb الربع $rub',
                   child: Text(
                     'الحزب $hizb • الربع $rub',
-                    style: GoogleFonts.amiri(
+                    style: const TextStyle(fontFamily: 'Amiri',
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.emeraldGreen,
@@ -200,25 +260,28 @@ class _MushafViewState extends ConsumerState<MushafView> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
+        onPressed: () {
           HapticFeedback.mediumImpact();
           final playingAyah = ref.read(currentPlayingAyahProvider);
           
           if (playingAyah == null) {
             // Start playing the first ayah of the current view
             final currentThumun = ref.read(currentThumunIndexProvider);
-            // We need the first ayah of this thumun. 
-            // For simplicity, let's trigger it from the current Hizb/Quarter
-            final ayahs = await ref.read(hizbQuarterAyahsProvider((currentThumun / 8).ceil()).future);
-            if (ayahs.isNotEmpty) {
-              ref.read(currentPlayingAyahProvider.notifier).playAyah(ayahs.first);
-            }
+            ref.read(thumunAyahsProvider(currentThumun).future).then((ayahs) {
+              if (ayahs.isNotEmpty) {
+                ref.read(currentPlayingAyahProvider.notifier).playAyah(ayahs.first);
+              }
+            });
           } else {
             ref.read(currentPlayingAyahProvider.notifier).togglePlayPause();
           }
         },
         backgroundColor: AppTheme.emeraldGreen,
-        child: const Icon(Icons.play_arrow_rounded, size: 36, color: Colors.white),
+        child: Icon(
+          ref.watch(optimisticIsPlayingProvider) ? Icons.pause_rounded : Icons.play_arrow_rounded, 
+          size: 36, 
+          color: Colors.white
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );

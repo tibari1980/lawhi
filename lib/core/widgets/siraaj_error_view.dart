@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../app_theme.dart';
 
 class SiraajErrorView extends StatelessWidget {
@@ -41,7 +40,8 @@ class SiraajErrorView extends StatelessWidget {
             Text(
               'القُرْآنُ السِّراجُ يَعْتذِرُ لَكُمْ عَنْ هَذَا الخَطَإِ العَرَضِيّ',
               textAlign: TextAlign.center,
-              style: GoogleFonts.amiri(
+              style: const TextStyle(
+                fontFamily: 'Amiri',
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 height: 1.5,
@@ -56,9 +56,10 @@ class SiraajErrorView extends StatelessWidget {
                 ? 'Vous êtes hors connexion. Vérifiez votre réseau pour charger de nouveaux contenus.'
                 : 'Al-Quran As-Siraj s\'excuse pour ce désagrément occasionnel.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: const TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 16,
-                color: Colors.grey.shade600,
+                color: Colors.grey,
               ),
             ),
             

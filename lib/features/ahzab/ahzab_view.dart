@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/quran_provider.dart';
 import '../../core/app_theme.dart';
@@ -26,11 +25,7 @@ class AhzabView extends ConsumerWidget {
               centerTitle: true,
               title: Text(
                 'فهرس الأحزاب',
-                style: GoogleFonts.amiri(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                  color: Colors.white,
-                ),
+                style: const TextStyle(fontFamily: 'Amiri', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               background: Container(
                 decoration: BoxDecoration(
@@ -55,11 +50,9 @@ class AhzabView extends ConsumerWidget {
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+            sliver: SliverList.builder(
               itemCount: 60,
               itemBuilder: (context, index) {
                 final hizbNumber = index + 1;
@@ -73,14 +66,22 @@ class AhzabView extends ConsumerWidget {
   }
 }
 
-class _HizbCard extends ConsumerWidget {
+class _HizbCard extends ConsumerStatefulWidget {
   final int hizbNumber;
-
   const _HizbCard({required this.hizbNumber});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final firstAyahAsync = ref.watch(hizbFirstAyahProvider(hizbNumber));
+  ConsumerState<_HizbCard> createState() => _HizbCardState();
+}
+
+class _HizbCardState extends ConsumerState<_HizbCard> {
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentAyah = ref.watch(currentPlayingAyahProvider);
+    final bool isThisHizbActive = currentAyah != null && currentAyah.hizb == widget.hizbNumber;
+    final bool isPlaying = ref.watch(isPlayingProvider).value ?? false;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -97,20 +98,40 @@ class _HizbCard extends ConsumerWidget {
         ],
       ),
       child: Semantics(
-        label: 'الحزب $hizbNumber، اضغط للبدء من بداية الحزب',
+        label: 'الحزب ${widget.hizbNumber}، اضغط للبدء من بداية الحزب',
         button: true,
-        onTapHint: 'الذهاب إلى الحزب $hizbNumber',
+        onTapHint: 'الذهاب إلى الحزب ${widget.hizbNumber}',
         child: InkWell(
-          onTap: () {
+          onTap: () async {
+            if (_isLoading) return;
             HapticFeedback.lightImpact();
-            final firstThumunOfHizb = (hizbNumber - 1) * 8 + 1;
-            ref.read(currentThumunIndexProvider.notifier).state = firstThumunOfHizb;
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const MushafView(),
-              ),
-            );
+            
+            setState(() => _isLoading = true);
+            
+            try {
+              // Resolve the starting ayah of the hizb first for accurate navigation
+              final firstAyah = await ref.read(hizbFirstAyahProvider(widget.hizbNumber).future);
+              if (!mounted) return;
+              
+              ref.read(targetAyahGlobalNumberProvider.notifier).state = firstAyah.number;
+              ref.read(selectedSurahNumberProvider.notifier).state = firstAyah.surahNumber;
+
+              if (context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MushafView()),
+                ).then((_) {
+                  if (mounted) {
+                    ref.read(selectedSurahNumberProvider.notifier).state = null;
+                    ref.read(targetAyahGlobalNumberProvider.notifier).state = null;
+                  }
+                });
+              }
+            } finally {
+              if (mounted) {
+                setState(() => _isLoading = false);
+              }
+            }
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -140,27 +161,61 @@ class _HizbCard extends ConsumerWidget {
                             ],
                           ),
                           child: Center(
-                            child: Text(
-                              '$hizbNumber',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                fontSize: 18,
+                            child: _isLoading 
+                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                             : Text(
+                                '${widget.hizbNumber}',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                ),
                               ),
-                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Semantics(
-                          label: 'Lecture du Hizb $hizbNumber',
+                          label: (isThisHizbActive && isPlaying) ? 'Pause du Hizb ${widget.hizbNumber}' : 'Lecture du Hizb ${widget.hizbNumber}',
                           button: true,
                           child: IconButton(
-                            icon: const Icon(Icons.play_circle_fill_rounded, color: AppTheme.richGold, size: 40),
+                            icon: Icon(
+                              (isThisHizbActive && isPlaying) ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded, 
+                              color: AppTheme.richGold, 
+                              size: 40
+                            ),
                             onPressed: () async {
+                              if (_isLoading) return;
                               HapticFeedback.lightImpact();
-                              final firstAyah = await firstAyahAsync.value;
-                              if (firstAyah != null) {
-                                ref.read(currentPlayingAyahProvider.notifier).playAyah(firstAyah);
+                              
+                              setState(() => _isLoading = true);
+                              
+                              try {
+                                final firstAyah = await ref.read(hizbFirstAyahProvider(widget.hizbNumber).future);
+                                if (!mounted) return;
+                                
+                                final firstThumunOfHizb = (widget.hizbNumber - 1) * 8 + 1;
+                                ref.read(currentThumunIndexProvider.notifier).state = firstThumunOfHizb;
+                                ref.read(targetAyahGlobalNumberProvider.notifier).state = firstAyah.number;
+                                ref.read(selectedSurahNumberProvider.notifier).state = firstAyah.surahNumber;
+                                
+                                if (context.mounted) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const MushafView()),
+                                  ).then((_) {
+                                    if (mounted) {
+                                      ref.read(selectedSurahNumberProvider.notifier).state = null;
+                                    }
+                                  });
+                                }
+
+                                // Start audio properly synced
+                                await ref.read(currentPlayingAyahProvider.notifier).playAyah(firstAyah);
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isLoading = false);
+                                }
                               }
                             },
                           ),
@@ -168,12 +223,8 @@ class _HizbCard extends ConsumerWidget {
                       ],
                     ),
                     Text(
-                      'الحزب $hizbNumber',
-                      style: GoogleFonts.amiri(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1F2937),
-                      ),
+                      'الحزب ${widget.hizbNumber}',
+                      style: const TextStyle(fontFamily: 'Amiri', fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
                     ),
                   ],
                 ),
@@ -186,7 +237,7 @@ class _HizbCard extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppTheme.emeraldGreen.withValues(alpha: 0.05)),
                   ),
-                  child: firstAyahAsync.when(
+                  child: ref.watch(hizbFirstAyahProvider(widget.hizbNumber)).when(
                     loading: () => const Center(
                       child: SizedBox(
                         width: 20,
@@ -195,23 +246,16 @@ class _HizbCard extends ConsumerWidget {
                       ),
                     ),
                     error: (err, stack) => Text(
-                      'اضغط لعرض محتوى الحزب $hizbNumber كاملاً...',
+                      'اضغط لعرض محتوى الحزب ${widget.hizbNumber} كاملاً...',
                       textAlign: TextAlign.right,
-                      style: GoogleFonts.amiri(
-                        fontSize: 14,
-                        color: Colors.black26,
-                      ),
+                      style: const TextStyle(fontFamily: 'Amiri', fontSize: 14, color: Colors.grey),
                     ),
                     data: (ayah) => Text(
                       '${ayah.text}...',
                       textAlign: TextAlign.right,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.amiri(
-                        fontSize: 18,
-                        color: const Color(0xFF4B5563),
-                        height: 1.6,
-                      ),
+                      style: const TextStyle(fontFamily: 'Amiri', fontSize: 18, color: Color(0xFF4B5563), height: 1.6),
                     ),
                   ),
                 ),
@@ -229,7 +273,8 @@ class _HizbCard extends ConsumerWidget {
                         children: [
                           Text(
                             'عرض الحزب',
-                            style: GoogleFonts.inter(
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.emeraldGreen,

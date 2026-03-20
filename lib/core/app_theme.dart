@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Design: Al-Quran As-Siraj
-  // Custom Color: #F2B90D (Gold)
-  // Roundness: 12.0 (ROUND_TWELVE)
-  // Font: Inter
+  // Font: Inter (Local)
+  // Font: Amiri (Local)
 
+  static const Color premiumGold = Color(0xFFC5A022); // Satin Gold
   static const Color emeraldGreen = Color(0xFF064E3B);
   static const Color richGold = Color(0xFFD97706);
   static const Color creamWhite = Color(0xFFFFFBEB);
@@ -15,13 +14,14 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter',
       colorScheme: ColorScheme.fromSeed(
         seedColor: emeraldGreen,
         primary: emeraldGreen,
-        secondary: richGold,
+        secondary: premiumGold,
         onPrimary: Colors.white,
         surface: creamWhite,
-        onSurface: Color(0xFF1F2937),
+        onSurface: const Color(0xFF1F2937),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -29,13 +29,12 @@ class AppTheme {
         centerTitle: true,
         elevation: 0,
       ),
-      textTheme: GoogleFonts.outfitTextTheme(),
       cardTheme: CardThemeData(
         elevation: 0,
         color: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          side: BorderSide(color: Colors.black.withValues(alpha: 0.05)),
+          side: const BorderSide(color: Colors.black12),
         ),
       ),
     );
@@ -44,12 +43,13 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter',
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
         brightness: Brightness.dark,
         seedColor: emeraldGreen,
         primary: emeraldGreen,
-        secondary: richGold,
+        secondary: premiumGold,
         surface: const Color(0xFF020617),
         onSurface: Colors.white,
       ),
@@ -59,13 +59,12 @@ class AppTheme {
         centerTitle: true,
         elevation: 0,
       ),
-      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
       cardTheme: CardThemeData(
         elevation: 0,
         color: const Color(0xFF0F172A),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          side: const BorderSide(color: Colors.white10),
         ),
       ),
     );

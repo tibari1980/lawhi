@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/settings_provider.dart';
 import '../../../core/models/quran_models.dart';
@@ -20,7 +19,7 @@ class RiwayaSelectionDialog extends ConsumerWidget {
           children: [
             Text(
               'تحديد الرواية',
-              style: GoogleFonts.amiri(
+              style: const TextStyle(fontFamily: 'Amiri',
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
@@ -47,7 +46,7 @@ class RiwayaSelectionDialog extends ConsumerWidget {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'إلغاء',
-                style: GoogleFonts.amiri(
+                style: const TextStyle(fontFamily: 'Amiri',
                   fontSize: 20,
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
@@ -78,7 +77,7 @@ class RiwayaSelectionDialog extends ConsumerWidget {
         alignment: Alignment.center,
         child: Text(
           label,
-          style: GoogleFonts.amiri(
+          style: TextStyle(fontFamily: 'Amiri',
             fontSize: 22,
             color: Colors.blue,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

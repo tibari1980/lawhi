@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_theme.dart';
 import '../../core/settings_provider.dart';
@@ -24,7 +23,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
       appBar: widget.showAppBar ? AppBar(
         title: Text(
           'إعدادات',
-          style: GoogleFonts.amiri(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
+          style: const TextStyle(fontFamily: 'Amiri', fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: AppTheme.emeraldGreen,
@@ -88,7 +87,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                     'فَأَسْقَيْنَاكُمُوهُ...',
                     textAlign: TextAlign.center,
                     textDirection: TextDirection.rtl,
-                    style: GoogleFonts.amiri(
+                    style: TextStyle(fontFamily: 'Amiri',
                       fontSize: settings.fontSize * 0.7,
                       color: settings.backgroundColor == const Color(0xFFF1F5F9) ? Colors.black : Colors.white,
                       fontWeight: FontWeight.bold,
@@ -213,6 +212,7 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                 Text(
                   label,
                   style: TextStyle(
+                    fontFamily: 'Amiri', // Added fontFamily
                     fontSize: 16,
                     color: isSelected ? Colors.blue : Colors.black87,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -220,7 +220,9 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                 ),
                 Radio<T>(
                   value: option,
+                  // ignore: deprecated_member_use
                   groupValue: currentValue,
+                  // ignore: deprecated_member_use
                   onChanged: onChanged,
                   activeColor: Colors.blue,
                   visualDensity: VisualDensity.compact,
@@ -251,14 +253,14 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: GoogleFonts.amiri(fontSize: 28, fontWeight: FontWeight.bold),
+      style: const TextStyle(fontFamily: 'Amiri', fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.emeraldGreen),
     );
   }
 
   Widget _buildSectionSubtitle(String title) {
     return Text(
       title,
-      style: GoogleFonts.amiri(fontSize: 22, fontWeight: FontWeight.bold),
+      style: const TextStyle(fontFamily: 'Amiri', fontSize: 22, fontWeight: FontWeight.bold),
     );
   }
 

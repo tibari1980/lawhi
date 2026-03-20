@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_theme.dart';
 import '../../core/quran_provider.dart';
@@ -30,11 +29,7 @@ class SuwarView extends ConsumerWidget {
               centerTitle: true,
               title: Text(
                 'فهرس السور',
-                style: GoogleFonts.amiri(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                  color: Colors.white,
-                ),
+                style: const TextStyle(fontFamily: 'Amiri', fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               background: Container(
                 decoration: BoxDecoration(
@@ -59,22 +54,23 @@ class SuwarView extends ConsumerWidget {
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: surahsAsyncValue.when(
-              loading: () => Padding(
-                padding: const EdgeInsets.all(40.0),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+            sliver: surahsAsyncValue.when(
+              loading: () => const SliverFillRemaining(
+                hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator(color: AppTheme.emeraldGreen)),
               ),
-              error: (err, stack) => SiraajErrorView(
-                error: err.toString(),
-                onRetry: () => ref.refresh(surahsProvider),
-                isOffline: err.toString().contains('SocketException') || err.toString().contains('Connection'),
+              error: (err, stack) => SliverFillRemaining(
+                hasScrollBody: false,
+                child: SiraajErrorView(
+                  error: err.toString(),
+                  onRetry: () => ref.refresh(surahsProvider),
+                  isOffline: err.toString().contains('SocketException') || err.toString().contains('Connection'),
+                ),
               ),
               data: (surahs) {
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
+                return SliverList.builder(
                   itemCount: surahs.length,
                   itemBuilder: (context, index) {
                     final surah = surahs[index];
@@ -122,41 +118,40 @@ class _SurahCardState extends ConsumerState<_SurahCard> {
         button: true,
         onTapHint: 'الذهاب إلى سورة ${widget.surah.name}',
         child: InkWell(
-          onTap: _isLoading ? null : () async {
-            setState(() => _isLoading = true);
+          onTap: () async {
+            if (_isLoading) return;
             HapticFeedback.lightImpact();
+            
+            setState(() => _isLoading = true);
+            
             try {
+              // Set basic info for Hero animations and title
+              ref.read(selectedSurahNumberProvider.notifier).state = widget.surah.number;
+              
+              // Resolve the starting ayah of the surah first for accurate navigation
               final ayahs = await ref.read(surahAyahsProvider(widget.surah.number).future);
+              if (!mounted) return;
+              
               if (ayahs.isNotEmpty) {
                 final firstAyah = ayahs.first;
-                final quarterAyahs = await ref.read(hizbQuarterAyahsProvider(firstAyah.hizbQuarter).future);
-                final startThumun = firstAyah.getThumunIndex(quarterAyahs);
-                
-                ref.read(currentThumunIndexProvider.notifier).state = startThumun;
                 ref.read(targetAyahGlobalNumberProvider.notifier).state = firstAyah.number;
-                ref.read(selectedSurahNumberProvider.notifier).state = widget.surah.number;
-                
-                if (mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MushafView()),
-                  ).then((_) {
-                    // Reset selection after returning
-                    ref.read(selectedSurahNumberProvider.notifier).state = null;
-                  });
-                }
               }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('خطأ في التحميل: ${e.toString()}'),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
+
+              if (context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const MushafView()),
+                ).then((_) {
+                  if (mounted) {
+                    ref.read(selectedSurahNumberProvider.notifier).state = null;
+                    ref.read(targetAyahGlobalNumberProvider.notifier).state = null;
+                  }
+                });
               }
             } finally {
-              if (mounted) setState(() => _isLoading = false);
+              if (mounted) {
+                setState(() => _isLoading = false);
+              }
             }
           },
           borderRadius: BorderRadius.circular(20),
@@ -166,19 +161,21 @@ class _SurahCardState extends ConsumerState<_SurahCard> {
               children: [
                 // Number label with specific design
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 45,
+                  height: 45,
                   decoration: BoxDecoration(
                     color: AppTheme.emeraldGreen.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: _isLoading 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldGreen))
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.emeraldGreen))
                       : ExcludeSemantics(
                           child: Text(
                             '${widget.surah.number}',
-                            style: GoogleFonts.inter(
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.emeraldGreen,
                             ),
@@ -186,7 +183,74 @@ class _SurahCardState extends ConsumerState<_SurahCard> {
                         ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
+
+                // Dynamic Play Button
+                Consumer(
+                  builder: (context, ref, child) {
+                    final currentAyah = ref.watch(currentPlayingAyahProvider);
+                    final isPlayingOptimistic = ref.watch(optimisticIsPlayingProvider);
+                    final bool isThisSurahActive = currentAyah?.surahNumber == widget.surah.number;
+                    final bool isThisSurahPlaying = isThisSurahActive && isPlayingOptimistic;
+
+                    return Semantics(
+                      label: isThisSurahPlaying ? 'Pause du sourate ${widget.surah.englishName}' : 'Lecture du sourate ${widget.surah.englishName}',
+                      button: true,
+                      child: IconButton(
+                        icon: Icon(
+                          isThisSurahPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded, 
+                          color: AppTheme.richGold, 
+                          size: 32
+                        ),
+                        onPressed: () async {
+                          if (_isLoading) return;
+                          HapticFeedback.lightImpact();
+                          
+                          setState(() => _isLoading = true);
+                          
+                          try {
+                            // Resolve the starting ayah first for accurate navigation and audio
+                            final ayahs = await ref.read(surahAyahsProvider(widget.surah.number).future);
+                            if (!mounted) return;
+                            
+                            if (ayahs.isNotEmpty) {
+                              final firstAyah = ayahs.first;
+                              final quarterAyahs = await ref.read(hizbQuarterAyahsProvider(firstAyah.hizbQuarter).future);
+                              if (!mounted) return;
+                              
+                              final startThumun = firstAyah.getThumunIndex(quarterAyahs);
+                              
+                              // Set all state markers for perfect sync
+                              ref.read(selectedSurahNumberProvider.notifier).state = widget.surah.number;
+                              ref.read(currentThumunIndexProvider.notifier).state = startThumun;
+                              ref.read(targetAyahGlobalNumberProvider.notifier).state = firstAyah.number;
+                              
+                              // Start navigation
+                              if (context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const MushafView()),
+                                ).then((_) {
+                                  if (mounted) {
+                                    ref.read(selectedSurahNumberProvider.notifier).state = null;
+                                  }
+                                });
+                              }
+
+                              // Start audio with the full surah context
+                              await ref.read(currentPlayingAyahProvider.notifier).playAyah(firstAyah);
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isLoading = false);
+                            }
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
                 
                 // Name and details
                 Expanded(
@@ -195,17 +259,19 @@ class _SurahCardState extends ConsumerState<_SurahCard> {
                     children: [
                       Text(
                         widget.surah.englishName,
-                        style: GoogleFonts.inter(
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF6B7280),
+                          color: Color(0xFF6B7280),
                         ),
                       ),
                       Text(
                         '${widget.surah.numberOfAyahs} آية • ${widget.surah.revelationType == 'Meccan' ? 'مكية' : 'مدنية'}',
-                        style: GoogleFonts.inter(
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
                           fontSize: 12,
-                          color: const Color(0xFF9CA3AF),
+                          color: Color(0xFF9CA3AF),
                         ),
                       ),
                     ],
@@ -222,12 +288,7 @@ class _SurahCardState extends ConsumerState<_SurahCard> {
                         color: Colors.transparent,
                         child: Text(
                           widget.surah.name,
-                          style: GoogleFonts.amiri(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF1F2937),
-                            height: 1.2,
-                          ),
+                          style: const TextStyle(fontFamily: 'Amiri', fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937), height: 1.2),
                         ),
                       ),
                     ),

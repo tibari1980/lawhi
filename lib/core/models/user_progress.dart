@@ -24,4 +24,21 @@ class UserProgress {
       revisionList: revisionList ?? this.revisionList,
     );
   }
+  factory UserProgress.fromMap(Map<String, dynamic> map) {
+    return UserProgress(
+      lastReadThumun: map['lastReadThumun'] ?? 1,
+      hifzCount: map['hifzCount'] ?? 0,
+      lastHifzThumun: map['lastHifzThumun'] ?? 0,
+      revisionList: List<int>.from(map['revisionList'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'lastReadThumun': lastReadThumun,
+      'hifzCount': hifzCount,
+      'lastHifzThumun': lastHifzThumun,
+      'revisionList': revisionList,
+    };
+  }
 }

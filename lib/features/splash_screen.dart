@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -66,21 +64,24 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ).createShader(bounds),
                     child: Text(
                       'القرآن السراج',
-                      style: GoogleFonts.amiri(
-                        fontSize: 64,
+                      style: const TextStyle(
+                        fontFamily: 'Amiri',
+                        fontSize: 48,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                        letterSpacing: 2,
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'AL-QURAN AS-SIRAJ',
-                    style: GoogleFonts.outfit(
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
                       fontSize: 18,
                       fontWeight: FontWeight.w400,
                       letterSpacing: 6,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Colors.white60,
                     ),
                   ),
                   const SizedBox(height: 60),

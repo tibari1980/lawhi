@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/quran_models.dart';
 
 class AppSettings {
@@ -47,36 +48,55 @@ class AppSettings {
 }
 
 class SettingsNotifier extends StateNotifier<AppSettings> {
-  SettingsNotifier()
+  final SharedPreferences _prefs;
+
+  static const String _keyFontSize = 'fontSize';
+  static const String _keyScrollSpeed = 'scrollSpeed';
+  static const String _keyBackgroundColor = 'backgroundColor';
+  static const String _keyLanguage = 'language';
+  static const String _keyShowTranslation = 'showTranslation';
+  static const String _keyTranslationLanguage = 'translationLanguage';
+  static const String _keyShowPhonetics = 'showPhonetics';
+  static const String _keyRiwaya = 'riwaya';
+
+  SettingsNotifier(this._prefs)
       : super(AppSettings(
-          fontSize: 30.0,
-          scrollSpeed: 10.0,
-          backgroundColor: const Color(0xFF0F172A),
-          language: 'العربية',
-          showTranslation: false,
-          translationLanguage: 'None',
-          showPhonetics: false,
-          riwaya: Riwaya.warsh,
+          fontSize: _prefs.getDouble(_keyFontSize) ?? 30.0,
+          scrollSpeed: _prefs.getDouble(_keyScrollSpeed) ?? 10.0,
+          backgroundColor: Color(_prefs.getInt(_keyBackgroundColor) ?? 0xFF0F172A),
+          language: _prefs.getString(_keyLanguage) ?? 'العربية',
+          showTranslation: _prefs.getBool(_keyShowTranslation) ?? false,
+          translationLanguage: _prefs.getString(_keyTranslationLanguage) ?? 'None',
+          showPhonetics: _prefs.getBool(_keyShowPhonetics) ?? false,
+          riwaya: Riwaya.values.firstWhere(
+            (r) => r.name == _prefs.getString(_keyRiwaya),
+            orElse: () => Riwaya.warsh,
+          ),
         ));
 
   void setFontSize(double size) {
     state = state.copyWith(fontSize: size);
+    _prefs.setDouble(_keyFontSize, size);
   }
 
   void setScrollSpeed(double speed) {
     state = state.copyWith(scrollSpeed: speed);
+    _prefs.setDouble(_keyScrollSpeed, speed);
   }
 
   void setBackgroundColor(Color color) {
     state = state.copyWith(backgroundColor: color);
+    _prefs.setInt(_keyBackgroundColor, color.toARGB32());
   }
 
   void setLanguage(String lang) {
     state = state.copyWith(language: lang);
+    _prefs.setString(_keyLanguage, lang);
   }
 
   void setShowTranslation(bool show) {
     state = state.copyWith(showTranslation: show);
+    _prefs.setBool(_keyShowTranslation, show);
   }
 
   void setTranslationLanguage(String lang) {
@@ -84,17 +104,26 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       translationLanguage: lang,
       showTranslation: lang != 'None',
     );
+    _prefs.setString(_keyTranslationLanguage, lang);
+    _prefs.setBool(_keyShowTranslation, lang != 'None');
   }
 
   void setShowPhonetics(bool show) {
     state = state.copyWith(showPhonetics: show);
+    _prefs.setBool(_keyShowPhonetics, show);
   }
 
   void setRiwaya(Riwaya riwaya) {
     state = state.copyWith(riwaya: riwaya);
+    _prefs.setString(_keyRiwaya, riwaya.name);
   }
 }
 
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError();
+});
+
 final settingsProvider = StateNotifierProvider<SettingsNotifier, AppSettings>((ref) {
-  return SettingsNotifier();
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return SettingsNotifier(prefs);
 });

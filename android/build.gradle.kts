@@ -5,16 +5,17 @@ allprojects {
     }
 }
 
-val newBuildDir: Directory =
-    rootProject.layout.buildDirectory
-        .dir("../../build")
-        .get()
-rootProject.layout.buildDirectory.value(newBuildDir)
+rootProject.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir("../build").get())
 
 subprojects {
-    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
-    project.layout.buildDirectory.value(newSubprojectBuildDir)
+    // Only override the build directory for the main app project
+    // This prevents Gradle from trying to create relative paths across drives
+    // for plugins located in the pub cache (e.g. at C:\Users\Pc\...)
+    if (project.path.startsWith(":app")) {
+        project.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir(project.name).get())
+    }
 }
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

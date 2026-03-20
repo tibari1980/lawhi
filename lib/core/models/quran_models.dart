@@ -85,7 +85,7 @@ class Ayah {
     return idx < midPoint ? baseThumun : baseThumun + 1;
   }
 
-  factory Ayah.fromJson(Map<String, dynamic> json, {String? translation, String? phonetics}) {
+  factory Ayah.fromJson(Map<String, dynamic> json, {String? translation, String? phonetics, int? surahNumber, String? surahName}) {
     return Ayah(
       number: json['number'],
       text: json['text'],
@@ -97,8 +97,8 @@ class Ayah {
       page: json['page'],
       ruku: json['ruku'],
       hizbQuarter: json['hizbQuarter'],
-      surahNumber: json['surahNumber'] ?? (json['surah'] != null ? json['surah']['number'] : 0),
-      surahName: json['surahName'] ?? (json['surah'] != null ? json['surah']['name'] : ''),
+      surahNumber: surahNumber ?? json['surahNumber'] ?? (json['surah'] != null ? json['surah']['number'] : 0),
+      surahName: surahName ?? json['surahName'] ?? (json['surah'] != null ? json['surah']['name'] : ''),
       sajda: json['sajda'] is Map 
           ? json['sajda']['id'] 
           : (json['sajda'] is bool ? (json['sajda'] ? 1 : 0) : json['sajda']),

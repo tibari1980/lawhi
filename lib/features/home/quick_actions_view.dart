@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_theme.dart';
 import '../../core/quran_provider.dart';
 import '../../core/models/user_progress.dart';
 import '../../core/user_progress_provider.dart';
 import 'dart:ui';
 import '../mushaf/mushaf_view.dart';
+import '../doua/doua_page.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
@@ -65,10 +65,10 @@ class QuickActionsView extends ConsumerWidget {
                       ),
                       child: TextField(
                         onChanged: (value) => ref.read(searchQueryProvider.notifier).state = value,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500),
                         decoration: InputDecoration(
-                          hintText: 'ابحث عن سورة...',
-                          hintStyle: GoogleFonts.amiri(color: Colors.grey[600], fontSize: 18),
+                          hintText: 'ابحث عن سورة أو آية...',
+                          hintStyle: const TextStyle(fontFamily: 'Amiri', color: Colors.grey, fontSize: 18),
                           border: InputBorder.none,
                           prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.richGold),
                         ),
@@ -101,7 +101,7 @@ class QuickActionsView extends ConsumerWidget {
                             const SizedBox(height: 60),
                             Icon(Icons.search_off_rounded, size: 80, color: theme.colorScheme.outline.withValues(alpha: 0.2)),
                             const SizedBox(height: 16),
-                            Text('لا توجد نتائج', style: GoogleFonts.amiri(fontSize: 22, color: theme.colorScheme.outline)),
+                            Text('لا توجد نتائج', style: TextStyle(fontFamily: 'Amiri', fontSize: 22, color: theme.colorScheme.outline)),
                           ],
                         ),
                       );
@@ -128,25 +128,22 @@ class QuickActionsView extends ConsumerWidget {
                           ),
                           child: ListTile(
                             contentPadding: const EdgeInsets.all(12),
-                            onTap: () async {
-                              final ayahsAsync = await ref.read(surahAyahsProvider(surah.number).future);
-                              if (ayahsAsync.isNotEmpty) {
-                                final firstAyah = ayahsAsync.first;
-                                
-                                // Start audio playback directly
-                                ref.read(currentPlayingAyahProvider.notifier).playAyah(firstAyah);
-                                
-                                // Precision navigation
-                                final quarterAyahs = await ref.read(hizbQuarterAyahsProvider(firstAyah.hizbQuarter).future);
-                                final startThumun = firstAyah.getThumunIndex(quarterAyahs);
-                                
-                                ref.read(currentThumunIndexProvider.notifier).state = startThumun;
-                                ref.read(targetAyahGlobalNumberProvider.notifier).state = firstAyah.number;
-                                ref.read(lastReadProvider.notifier).state = 'سورة ${surah.name}';
-                                if (context.mounted) {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => const MushafView()));
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              ref.read(selectedSurahNumberProvider.notifier).state = surah.number;
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => const MushafView()));
+                              
+                              ref.read(surahAyahsProvider(surah.number).future).then((ayahs) async {
+                                if (ayahs.isNotEmpty) {
+                                  final firstAyah = ayahs.first;
+                                  ref.read(currentPlayingAyahProvider.notifier).playAyah(firstAyah);
+                                  
+                                  final quarterAyahs = await ref.read(hizbQuarterAyahsProvider(firstAyah.hizbQuarter).future);
+                                  final startThumun = firstAyah.getThumunIndex(quarterAyahs);
+                                  ref.read(currentThumunIndexProvider.notifier).state = startThumun;
+                                  ref.read(targetAyahGlobalNumberProvider.notifier).state = firstAyah.number;
                                 }
-                              }
+                              });
                             },
                             leading: Container(
                               width: 45,
@@ -167,14 +164,52 @@ class QuickActionsView extends ConsumerWidget {
                             title: Text(
                               surah.name, 
                               textAlign: TextAlign.right, 
-                              style: GoogleFonts.amiri(fontWeight: FontWeight.bold, fontSize: 20),
+                              style: const TextStyle(fontFamily: 'Amiri', fontWeight: FontWeight.bold, fontSize: 20),
                             ),
                             subtitle: Text(
                               surah.englishName, 
                               textAlign: TextAlign.right, 
-                              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+                              style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: Colors.grey),
                             ),
-                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.richGold),
+                            trailing: Consumer(
+                              builder: (context, ref, child) {
+                                final currentAyah = ref.watch(currentPlayingAyahProvider);
+                                final isPlayingOptimistic = ref.watch(optimisticIsPlayingProvider);
+                                final bool isThisSurahActive = currentAyah?.surahNumber == surah.number;
+                                final bool isThisSurahPlaying = isThisSurahActive && isPlayingOptimistic;
+                                
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        isThisSurahPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded, 
+                                        color: AppTheme.richGold, 
+                                        size: 32
+                                      ),
+                                      onPressed: () {
+                                        HapticFeedback.lightImpact();
+                                        ref.read(selectedSurahNumberProvider.notifier).state = surah.number;
+                                        Navigator.push(context, MaterialPageRoute(builder: (context) => const MushafView()));
+
+                                        ref.read(surahAyahsProvider(surah.number).future).then((ayahs) async {
+                                          if (ayahs.isNotEmpty) {
+                                            final firstAyah = ayahs.first;
+                                            ref.read(currentPlayingAyahProvider.notifier).playAyah(firstAyah);
+                                            
+                                            final quarterAyahs = await ref.read(hizbQuarterAyahsProvider(firstAyah.hizbQuarter).future);
+                                            final startThumun = firstAyah.getThumunIndex(quarterAyahs);
+                                            ref.read(currentThumunIndexProvider.notifier).state = startThumun;
+                                            ref.read(targetAyahGlobalNumberProvider.notifier).state = firstAyah.number;
+                                          }
+                                        });
+                                      },
+                                    ),
+                                    const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.richGold),
+                                  ],
+                                );
+                              },
+                            ),
                           ),
                         );
                       },
@@ -195,6 +230,30 @@ class QuickActionsView extends ConsumerWidget {
                       crossAxisSpacing: 20,
                       childAspectRatio: 0.95,
                       children: [
+                        _buildPremiumActionCard(
+                          context,
+                          'أذكار الصباح',
+                          'حفظ وبركة',
+                          Icons.wb_sunny_rounded,
+                          [AppTheme.premiumGold, const Color(0xFFB8860B)],
+                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DouaPage(type: ThikrType.sabah))),
+                        ),
+                        _buildPremiumActionCard(
+                          context,
+                          'أذكار المساء',
+                          'سكينة وطمأنينة',
+                          Icons.dark_mode_rounded,
+                          const [Color(0xFF312E81), Color(0xFF1E1B4B)],
+                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DouaPage(type: ThikrType.masaa))),
+                        ),
+                        _buildPremiumActionCard(
+                          context,
+                          'دعاء الختم',
+                          'يُستحب بعد القراءة',
+                          Icons.menu_book_rounded,
+                          const [Color(0xFF6366F1), Color(0xFF4338CA)],
+                          () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DouaPage(type: ThikrType.khatm))),
+                        ),
                         _buildPremiumActionCard(
                           context,
                           'سورة الكهف',
@@ -297,9 +356,9 @@ class QuickActionsView extends ConsumerWidget {
         children: [
           Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 24),
-          Text('تقدم الحفظ', style: GoogleFonts.amiri(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text('تقدم الحفظ', style: const TextStyle(fontFamily: 'Amiri', fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          Text('لقد أتممت حفظ ${progress.hifzCount} ثمن من القرآن الكريم', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[700])),
+          Text('لقد أتممت حفظ ${progress.hifzCount} ثمن من القرآن الكريم', textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey)),
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () {
@@ -314,7 +373,7 @@ class QuickActionsView extends ConsumerWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
-            child: Text('متابعة الحفظ', style: GoogleFonts.amiri(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Text('متابعة الحفظ', style: const TextStyle(fontFamily: 'Amiri', fontSize: 20, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(height: 16),
           TextButton(
@@ -323,7 +382,7 @@ class QuickActionsView extends ConsumerWidget {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث التقدم بنجاح!', textAlign: TextAlign.right)));
             },
-            child: Text('تحديد الثمن الحالي كمكتمل', style: GoogleFonts.amiri(fontSize: 18, color: AppTheme.richGold)),
+            child: Text('تحديد الثمن الحالي كمكتمل', style: const TextStyle(fontFamily: 'Amiri', fontSize: 18, color: AppTheme.richGold)),
           ),
         ],
       ),
@@ -342,10 +401,10 @@ class QuickActionsView extends ConsumerWidget {
         children: [
           Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 24),
-          Text('قائمة المراجعة اليومية', style: GoogleFonts.amiri(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text('قائمة المراجعة اليومية', style: const TextStyle(fontFamily: 'Amiri', fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           if (progress.revisionList.isEmpty)
-            Text('لا توجد أجزاء للمراجعة حالياً', style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[600]))
+            Text('لا توجد أجزاء للمراجعة حالياً', style: const TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey))
           else
             ListView.builder(
               shrinkWrap: true,
@@ -354,7 +413,7 @@ class QuickActionsView extends ConsumerWidget {
                 final hizb = progress.revisionList[index];
                 return ListTile(
                   leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.menu_book_rounded, color: Color(0xFF3B82F6))),
-                  title: Text('الحزب $hizb', style: GoogleFonts.amiri(fontSize: 18, fontWeight: FontWeight.w600)),
+                  title: Text('الحزب $hizb', style: const TextStyle(fontFamily: 'Amiri', fontSize: 18, fontWeight: FontWeight.w600)),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
                   onTap: () {
                     final startThumun = (hizb - 1) * 8 + 1;
@@ -377,7 +436,8 @@ class QuickActionsView extends ConsumerWidget {
       children: [
         Text(
           title,
-          style: GoogleFonts.amiri(
+          style: const TextStyle(
+            fontFamily: 'Amiri',
             fontSize: 28, 
             fontWeight: FontWeight.bold, 
             color: AppTheme.emeraldGreen,
@@ -432,7 +492,7 @@ class QuickActionsView extends ConsumerWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: gradientColors[0].withOpacity(0.3),
+                color: gradientColors[0].withValues(alpha: 0.3),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -448,7 +508,7 @@ class QuickActionsView extends ConsumerWidget {
                   child: Icon(
                     icon,
                     size: 100,
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                   ),
                 ),
               ),
@@ -461,11 +521,11 @@ class QuickActionsView extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -481,7 +541,8 @@ class QuickActionsView extends ConsumerWidget {
                     Text(
                       title,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.amiri(
+                      style: const TextStyle(
+                        fontFamily: 'Amiri',
                         color: Colors.white,
                         fontSize: 22, // Slightly larger
                         fontWeight: FontWeight.bold,
@@ -491,8 +552,9 @@ class QuickActionsView extends ConsumerWidget {
                     Text(
                       subtitle,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withOpacity(0.9),
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        color: Colors.white70,
                         fontSize: 13,
                       ),
                     ),
