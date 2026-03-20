@@ -265,13 +265,9 @@ class _MushafViewState extends ConsumerState<MushafView> {
           final playingAyah = ref.read(currentPlayingAyahProvider);
           
           if (playingAyah == null) {
-            // Start playing the first ayah of the current view
+            // Start playing the current view with Hizb skip logic
             final currentThumun = ref.read(currentThumunIndexProvider);
-            ref.read(thumunAyahsProvider(currentThumun).future).then((ayahs) {
-              if (ayahs.isNotEmpty) {
-                ref.read(currentPlayingAyahProvider.notifier).playAyah(ayahs.first);
-              }
-            });
+            ref.read(currentPlayingAyahProvider.notifier).playThumun(currentThumun);
           } else {
             ref.read(currentPlayingAyahProvider.notifier).togglePlayPause();
           }

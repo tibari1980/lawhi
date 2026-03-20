@@ -181,13 +181,21 @@ class HomeView extends ConsumerWidget {
                       fontSize: 18,
                     ),
                   ),
-                  Text(
-                    'القرآن السراج',
-                    style: const TextStyle(
-                      fontFamily: 'Amiri',
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFFFDE68A), Color(0xFFD97706), Color(0xFFFDE68A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ).createShader(bounds),
+                    child: const Text(
+                      'القرآن السراج',
+                      style: TextStyle(
+                        fontFamily: 'Amiri',
+                        color: Colors.white,
+                        fontSize: 34, // Slightly larger
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ],
@@ -438,17 +446,25 @@ class HomeView extends ConsumerWidget {
         onTap();
       },
       borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.all(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: color.withValues(alpha: 0.1)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              color.withValues(alpha: 0.03),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: color.withValues(alpha: 0.12), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+              color: color.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -457,21 +473,45 @@ class HomeView extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                gradient: LinearGradient(
+                  colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.1)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Icon(icon, color: color, size: 30),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(fontFamily: 'Amiri', fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+              style: const TextStyle(
+                fontFamily: 'Amiri', 
+                fontSize: 19, 
+                fontWeight: FontWeight.bold, 
+                color: Color(0xFF1F2937),
+                height: 1.2,
+              ),
             ),
+            const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontFamily: 'Inter', 
+                fontSize: 12, 
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade600,
+                letterSpacing: 0.3,
+              ),
             ),
           ],
         ),

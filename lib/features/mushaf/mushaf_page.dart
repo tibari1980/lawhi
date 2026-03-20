@@ -215,7 +215,7 @@ class _MushafPageState extends ConsumerState<MushafPage> {
               builder: (context, index, child) {
                 final currentAyah = widget.ayahs[index.clamp(0, widget.ayahs.length - 1)];
                 int thumunInRob3 = index < (widget.ayahs.length / 2) ? 1 : 2;
-                int absoluteThumun = currentAyah.thumunBase + (thumunInRob3 - 1);
+                int absoluteThumun = currentAyah.globalThumun + (thumunInRob3 - 1);
 
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(20),
@@ -238,8 +238,9 @@ class _MushafPageState extends ConsumerState<MushafPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildIndicatorTag('الحزب ${currentAyah.hizb}', Icons.auto_stories),
-                          _buildIndicatorTag('الربع ${currentAyah.rub}', Icons.grid_view_rounded),
+                          _buildIndicatorTag('الجزء ${currentAyah.juz}', Icons.auto_stories),
+                          _buildIndicatorTag('الحزب ${currentAyah.hizb}', Icons.menu_book_rounded),
+                          _buildIndicatorTag('الربع ${currentAyah.hizbQuarter}', Icons.grid_view_rounded),
                           _buildIndicatorTag('الثمن $absoluteThumun', Icons.bookmark_added_rounded),
                         ],
                       ),

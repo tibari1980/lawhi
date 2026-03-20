@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/semantics.dart';
@@ -12,6 +13,8 @@ import 'settings_provider.dart';
 final quranServiceProvider = Provider((ref) => QuranService());
 final audioServiceProvider = Provider((ref) => QuranAudioService());
 final audioErrorProvider = StateProvider<String?>((ref) => null);
+
+enum PlaylistMode { surah, hizb, search }
 
 final currentPlayingAyahProvider = StateNotifierProvider<AudioNotifier, Ayah?>((ref) {
   return AudioNotifier(ref);
@@ -27,7 +30,9 @@ final isPlayingProvider = StreamProvider<bool>((ref) {
 class AudioNotifier extends StateNotifier<Ayah?> {
   final Ref ref;
   StreamSubscription<int?>? _indexSubscription;
+  StreamSubscription<PlayerState>? _stateSubscription;
   List<Ayah> _playlistAyahs = [];
+  PlaylistMode _currentMode = PlaylistMode.surah;
 
   bool _isManuallySeeking = false;
 
@@ -36,9 +41,11 @@ class AudioNotifier extends StateNotifier<Ayah?> {
   }
 
   void _setupListener() {
+    final audioService = ref.read(audioServiceProvider);
+    
     _indexSubscription?.cancel();
-    _indexSubscription = ref.read(audioServiceProvider).currentIndexStream.listen((index) {
-      if (_isManuallySeeking) return; // Ignore updates during manual seek
+    _indexSubscription = audioService.currentIndexStream.listen((index) {
+      if (_isManuallySeeking) return;
       
       if (index != null && index >= 0 && index < _playlistAyahs.length) {
         final newAyah = _playlistAyahs[index];
@@ -46,6 +53,13 @@ class AudioNotifier extends StateNotifier<Ayah?> {
           state = newAyah;
           _announceAyah(newAyah);
         }
+      }
+    });
+
+    _stateSubscription?.cancel();
+    _stateSubscription = audioService.playerStateStream.listen((playerState) {
+      if (playerState.processingState == ProcessingState.completed) {
+        playNext(isAutoAdvance: true);
       }
     });
   }
@@ -68,6 +82,7 @@ class AudioNotifier extends StateNotifier<Ayah?> {
     try {
       ref.read(audioErrorProvider.notifier).state = null;
       ref.read(optimisticIsPlayingProvider.notifier).state = true;
+      _currentMode = PlaylistMode.surah;
 
       // First, show the surah name placeholder
       final surahs = await ref.read(surahsProvider.future);
@@ -122,6 +137,7 @@ class AudioNotifier extends StateNotifier<Ayah?> {
     try {
       ref.read(audioErrorProvider.notifier).state = null;
       ref.read(optimisticIsPlayingProvider.notifier).state = true;
+      _currentMode = PlaylistMode.surah;
       final audioService = ref.read(audioServiceProvider);
       
       // If already playing exactly this ayah, just toggle (play/pause)
@@ -187,22 +203,155 @@ class AudioNotifier extends StateNotifier<Ayah?> {
     }
   }
 
+  Future<void> playHizb(int hizbNumber) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    
+    try {
+      ref.read(audioErrorProvider.notifier).state = null;
+      ref.read(optimisticIsPlayingProvider.notifier).state = true;
+      _currentMode = PlaylistMode.hizb;
+
+      final service = ref.read(quranServiceProvider);
+      final riwaya = ref.read(settingsProvider).riwaya;
+      final fetchedAyahs = await service.getHizbQuarterAyahs((hizbNumber - 1) * 4 + 1, riwaya);
+
+      if (fetchedAyahs.isNotEmpty) {
+        _playlistAyahs = fetchedAyahs;
+        state = _playlistAyahs.first;
+        
+        _isManuallySeeking = true;
+        _preCacheSurah(_playlistAyahs);
+        
+        final audioService = ref.read(audioServiceProvider);
+        await audioService.setPlaylist(_playlistAyahs, initialIndex: 0);
+        audioService.play();
+        
+        await Future.delayed(const Duration(milliseconds: 100));
+        _isManuallySeeking = false;
+      }
+    } catch (e) {
+      _isManuallySeeking = false;
+      state = null;
+      ref.read(optimisticIsPlayingProvider.notifier).state = false;
+      debugPrint('playHizb error: $e');
+    } finally {
+      _isLoading = false;
+    }
+  }
+
+  Future<void> playThumun(int thumunIndex) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    
+    try {
+      ref.read(audioErrorProvider.notifier).state = null;
+      ref.read(optimisticIsPlayingProvider.notifier).state = true;
+      _currentMode = PlaylistMode.hizb;
+
+      final ayahs = await ref.read(thumunAyahsProvider(thumunIndex).future);
+
+      if (ayahs.isNotEmpty) {
+        _playlistAyahs = ayahs;
+        state = _playlistAyahs.first;
+        
+        _isManuallySeeking = true;
+        _preCacheSurah(_playlistAyahs);
+        
+        final audioService = ref.read(audioServiceProvider);
+        await audioService.setPlaylist(_playlistAyahs, initialIndex: 0);
+        audioService.play();
+        
+        await Future.delayed(const Duration(milliseconds: 100));
+        _isManuallySeeking = false;
+      }
+    } catch (e) {
+      _isManuallySeeking = false;
+      state = null;
+      ref.read(optimisticIsPlayingProvider.notifier).state = false;
+      debugPrint('playThumun error: $e');
+    } finally {
+      _isLoading = false;
+    }
+  }
+
   void _preCacheSurah(List<Ayah> ayahs) {
     if (ayahs.isEmpty) return;
     // Fire and forget caching to prepare for potential Airplane mode
     ref.read(audioServiceProvider).preCacheSurah(ayahs);
   }
 
-  Future<void> playNext() async {
+  Future<void> playNext({bool isAutoAdvance = false}) async {
+    if (state == null) return;
+
     final audioService = ref.read(audioServiceProvider);
-    // Since we use ConcatenatingAudioSource, just seek to next
-    // The player will emit a new index which we listen to
-    await audioService.seekToIndex((_playlistAyahs.indexWhere((a) => a.number == (state?.number ?? -1))) + 1);
+    
+    // 1. Try to skip within current playlist (verses)
+    if (audioService.hasNext) {
+      await audioService.seekToNext();
+      if (!audioService.playing) {
+        audioService.play();
+      }
+      return;
+    }
+
+    // 2. If end of playlist, transition to next "container"
+    if (_currentMode == PlaylistMode.surah) {
+      if (state!.surahNumber < 114) {
+        await playSurah(state!.surahNumber + 1);
+      } else if (isAutoAdvance) {
+        // End of Quran reached
+        await stop();
+      }
+    } else if (_currentMode == PlaylistMode.hizb) {
+      // Logic for Thumun or Hizb
+      // We can use the current global thumun index to find the next one
+      final currentThumun = ref.read(currentThumunIndexProvider);
+      if (currentThumun < 480) {
+        final nextThumun = currentThumun + 1;
+        ref.read(currentThumunIndexProvider.notifier).state = nextThumun;
+        await playThumun(nextThumun);
+      } else if (isAutoAdvance) {
+        await stop();
+      }
+    }
   }
 
   Future<void> playPrevious() async {
+    if (state == null) return;
+
     final audioService = ref.read(audioServiceProvider);
-    await audioService.seekToIndex((_playlistAyahs.indexWhere((a) => a.number == (state?.number ?? -1))) - 1);
+
+    // 1. If playing > 3 seconds, restart current verse
+    if (audioService.position.inSeconds > 3) {
+      await audioService.seek(Duration.zero);
+      return;
+    }
+
+    // 2. Try to skip back within current playlist
+    if (audioService.hasPrevious) {
+      await audioService.seekToPrevious();
+      if (!audioService.playing) {
+        audioService.play();
+      }
+      return;
+    }
+
+    // 3. If at start of playlist, transition to previous "container"
+    if (_currentMode == PlaylistMode.surah) {
+      if (state!.surahNumber > 1) {
+        await playSurah(state!.surahNumber - 1);
+        // Optional: seek to the last verse of the previous surah
+        // This would require waiting for the playlist to load
+      }
+    } else if (_currentMode == PlaylistMode.hizb) {
+      final currentThumun = ref.read(currentThumunIndexProvider);
+      if (currentThumun > 1) {
+        final prevThumun = currentThumun - 1;
+        ref.read(currentThumunIndexProvider.notifier).state = prevThumun;
+        await playThumun(prevThumun);
+      }
+    }
   }
 
   Future<void> stop() async {
@@ -243,6 +392,7 @@ class AudioNotifier extends StateNotifier<Ayah?> {
   @override
   void dispose() {
     _indexSubscription?.cancel();
+    _stateSubscription?.cancel();
     super.dispose();
   }
 }

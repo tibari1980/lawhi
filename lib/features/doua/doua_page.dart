@@ -1,14 +1,12 @@
-import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import 'package:path/path.dart' as p;
-import 'doua_speech_helper.dart' if (dart.library.html) 'doua_speech_helper_web.dart';
 import '../../core/app_theme.dart';
 import '../../core/models/doua_content.dart';
 import '../../core/utils/audio_helper.dart';
@@ -25,15 +23,14 @@ class DouaPage extends StatefulWidget {
 }
 
 class _DouaPageState extends State<DouaPage> {
-  final FlutterTts flutterTts = FlutterTts();
   final AudioPlayer recitationPlayer = AudioPlayer();
   final ScrollController _scrollController = ScrollController();
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<PlayerState>? _playerStateSubscription;
   
-  bool isPlayingTTS = false;
   bool isRecitationPlaying = false;
   bool isRecitationLoading = false;
   
-  int currentPlayingIndex = -1;
   int activeThikrIndex = 0;
   Map<int, int> repetitionCounts = {};
   String? lastError;
@@ -41,7 +38,6 @@ class _DouaPageState extends State<DouaPage> {
   @override
   void initState() {
     super.initState();
-    _initTts();
     _initRecitationPlayer();
     _resetCounts();
   }
@@ -57,7 +53,6 @@ class _DouaPageState extends State<DouaPage> {
     
     setState(() => activeThikrIndex = index);
     
-    // Each item is ~250px, but using an estimate is fine
     const approximateItemHeight = 250.0;
     _scrollController.animateTo(
       index * approximateItemHeight,
@@ -85,8 +80,6 @@ class _DouaPageState extends State<DouaPage> {
     }
   }
 
-  StreamSubscription<PlayerState>? _playerSubscription;
-
   Future<void> _initRecitationPlayer() async {
     try {
       if (!kIsWeb) {
@@ -94,51 +87,43 @@ class _DouaPageState extends State<DouaPage> {
         await session.configure(const AudioSessionConfiguration.music());
       }
       
-      _playerSubscription = recitationPlayer.playerStateStream.listen((state) {
+      _playerStateSubscription = recitationPlayer.playerStateStream.listen((state) {
         if (!mounted) return;
-        if (state.processingState == ProcessingState.completed) {
-          setState(() { isRecitationPlaying = false; });
-        }
-      });
-    } catch (_) {}
-  }
-
-  int currentRepetitionIndex = 0;
-
-  Future<void> _initTts() async {
-    try {
-      await flutterTts.setLanguage("ar");
-      await flutterTts.setSpeechRate(0.45);
-      flutterTts.setCompletionHandler(() {
-        if (!mounted) return;
-        final thikrs = _getThikrs();
-        if (currentPlayingIndex < 0 || currentPlayingIndex >= thikrs.length) return;
-        
-        final thikr = thikrs[currentPlayingIndex];
         
         setState(() {
-          currentRepetitionIndex++;
-          repetitionCounts[currentPlayingIndex] = currentRepetitionIndex;
+          isRecitationPlaying = state.playing;
+          isRecitationLoading = state.processingState == ProcessingState.loading || 
+                               state.processingState == ProcessingState.buffering;
           
-          if (currentRepetitionIndex < thikr.count) {
-            _speak(thikr.text);
-          } else if (currentPlayingIndex < thikrs.length - 1) {
-            currentPlayingIndex++;
-            currentRepetitionIndex = 0;
-            _speak(thikrs[currentPlayingIndex].text);
-          } else {
-            isPlayingTTS = false;
-            currentPlayingIndex = -1;
-            currentRepetitionIndex = 0;
+          if (state.processingState == ProcessingState.completed) {
+            isRecitationPlaying = false;
+            isRecitationLoading = false;
           }
         });
       });
-    } catch (_) {}
-  }
 
-  String _stripDiacritics(String text) {
-    final diacritics = RegExp(r'[\u064B-\u0652]');
-    return text.replaceAll(diacritics, '');
+      _positionSubscription = recitationPlayer.positionStream.listen((position) {
+        if (!mounted || !isRecitationPlaying) return;
+        
+        final currentThikrs = _getThikrs();
+        int newIndex = activeThikrIndex;
+
+        for (int i = currentThikrs.length - 1; i >= 0; i--) {
+          final thikr = currentThikrs[i];
+          if (thikr.startTime != null && position >= thikr.startTime!) {
+            newIndex = i;
+            break;
+          }
+        }
+
+        if (newIndex != activeThikrIndex) {
+          setState(() {
+            activeThikrIndex = newIndex;
+          });
+          _scrollToIndex(newIndex);
+        }
+      });
+    } catch (_) {}
   }
 
   List<Thikr> _getThikrs() {
@@ -161,7 +146,7 @@ class _DouaPageState extends State<DouaPage> {
     switch (widget.type) {
       case ThikrType.sabah: return 'مشاري العفاسي';
       case ThikrType.masaa: return 'مشاري العفاسي';
-      case ThikrType.khatm: return 'العيون الكوشي (بالمغربية)';
+      case ThikrType.khatm: return 'عبد الرحمن السديس';
     }
   }
 
@@ -181,62 +166,6 @@ class _DouaPageState extends State<DouaPage> {
     }
   }
 
-  Future<void> _speak(String text) async {
-    if (text.isEmpty) return;
-    await _stopRecitation();
-    
-    // Auto-scroll to the item being spoken
-    final thikrs = _getThikrs();
-    final index = thikrs.indexWhere((t) => t.text == text);
-    if (index != -1) _scrollToIndex(index);
-
-    final plainText = _stripDiacritics(text);
-    try {
-      if (kIsWeb) {
-        DouaSpeechHelper.speakWeb(plainText, 
-          onEnd: () {
-            if (mounted && isPlayingTTS) {
-              final thikrs = _getThikrs();
-              final thikr = thikrs[currentPlayingIndex];
-              
-              setState(() {
-                currentRepetitionIndex++;
-                repetitionCounts[currentPlayingIndex] = currentRepetitionIndex;
-                
-                if (currentRepetitionIndex < thikr.count) {
-                  _speak(thikr.text);
-                } else if (currentPlayingIndex < thikrs.length - 1) {
-                  currentPlayingIndex++;
-                  currentRepetitionIndex = 0;
-                  _speak(thikrs[currentPlayingIndex].text);
-                } else {
-                  isPlayingTTS = false;
-                  currentPlayingIndex = -1;
-                  currentRepetitionIndex = 0;
-                }
-              });
-            }
-          },
-          onError: (err) {
-            if (mounted) setState(() => lastError = err);
-          }
-        );
-      } else {
-        await flutterTts.speak(plainText);
-      }
-      if (mounted) setState(() { isPlayingTTS = true; lastError = null; });
-    } catch (_) {}
-  }
-
-  Future<void> _stopAll() async {
-    try {
-      await flutterTts.stop();
-      DouaSpeechHelper.stopWeb();
-      await _stopRecitation();
-    } catch (_) {}
-    if (mounted) setState(() { isPlayingTTS = false; currentPlayingIndex = -1; activeThikrIndex = 0; });
-  }
-
   Future<void> _stopRecitation() async {
     try {
       await recitationPlayer.stop();
@@ -248,15 +177,18 @@ class _DouaPageState extends State<DouaPage> {
 
   Future<void> _playRecitation() async {
     if (_isLoadingSource) return;
-    if (isRecitationPlaying) {
-      setState(() => isRecitationPlaying = false);
-      recitationPlayer.pause();
+    
+    if (recitationPlayer.processingState != ProcessingState.idle) {
+      if (recitationPlayer.playing) {
+        await recitationPlayer.pause();
+      } else {
+        await recitationPlayer.play();
+      }
       return;
     }
     
     try {
       _isLoadingSource = true;
-      await _stopAll();
       if (mounted) setState(() { isRecitationLoading = true; lastError = null; activeThikrIndex = 0; _resetCounts(); });
 
       String url = '';
@@ -274,20 +206,11 @@ class _DouaPageState extends State<DouaPage> {
 
       try {
         if (kIsWeb) {
-          // Robust loading for Web with better fallbacks
-          try {
-            // Disable heavy preloading on web to maintain app fluidness
-            await recitationPlayer.setAudioSource(
-              AudioSource.uri(Uri.parse(url)),
-              preload: false,
-            );
-          } catch (e) {
-            debugPrint('Web Direct Playback Failed: $e');
-            // Trying proxy is often worse on modern browsers due to self-CORS, 
-            // so we will just retry or rely on the error handling to show "Robot Mode"
-          }
+          await recitationPlayer.setAudioSource(
+            AudioSource.uri(Uri.parse(url)),
+            preload: false,
+          );
         } else {
-          // Mobile logic
           final localSyncPath = await AudioSyncService().getLocalPath(widget.type.name);
           if (localSyncPath != null) {
             await recitationPlayer.setAudioSource(AudioSource.file(localSyncPath));
@@ -301,20 +224,17 @@ class _DouaPageState extends State<DouaPage> {
         }
 
         if (mounted) {
-          setState(() { isRecitationPlaying = true; isRecitationLoading = false; });
-          // Fire and forget play to allow UI to remain responsive
-          recitationPlayer.play();
+          setState(() { isRecitationLoading = true; lastError = null; activeThikrIndex = 0; _resetCounts(); });
+          await recitationPlayer.play();
+          if (mounted) setState(() { isRecitationPlaying = true; });
         }
       } catch (e) {
-        debugPrint('Final Audio Load Error: $e');
+        debugPrint('Audio Load Error: $e');
         if (mounted) {
           setState(() { 
-            lastError = "Échec du chargement audio. Utilisation du Mode Robot..."; 
+            lastError = "Échec du chargement audio. Veuillez réessayer."; 
             isRecitationLoading = false; 
-            currentPlayingIndex = 0;
-            currentRepetitionIndex = 0;
           });
-          _speak(_getThikrs()[currentPlayingIndex].text); 
         }
       }
     } catch (e) {
@@ -323,7 +243,7 @@ class _DouaPageState extends State<DouaPage> {
         setState(() { 
           isRecitationPlaying = false; 
           isRecitationLoading = false; 
-          lastError = "Détail: $e"; 
+          lastError = "Erreur: $e"; 
         });
       }
     } finally {
@@ -333,9 +253,9 @@ class _DouaPageState extends State<DouaPage> {
 
   @override
   void dispose() {
-    _playerSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _playerStateSubscription?.cancel();
     _scrollController.dispose();
-    flutterTts.stop();
     recitationPlayer.dispose();
     super.dispose();
   }
@@ -449,7 +369,7 @@ class _DouaPageState extends State<DouaPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(widget.type == ThikrType.khatm ? "الختمة بصوت مغربي" : "أذكار بصوت نقي", style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(widget.type == ThikrType.khatm ? "الختمة المباركة" : "أذكار بصوت نقي", style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
                               Text(_getReciterName(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Amiri')),
                             ],
                           ),
@@ -468,12 +388,14 @@ class _DouaPageState extends State<DouaPage> {
                     (context, index) {
                       final thikr = thikrs[index];
                       final isCurrent = activeThikrIndex == index;
-                      final isCurrentTTS = currentPlayingIndex == index && isPlayingTTS;
                       final count = repetitionCounts[index] ?? 0;
                       final isDone = count >= thikr.count;
 
                       return GestureDetector(
                         onTap: () {
+                          if (isRecitationPlaying && thikr.startTime != null) {
+                            recitationPlayer.seek(thikr.startTime!);
+                          }
                           _scrollToIndex(index);
                           _incrementCount(index);
                         },
@@ -500,19 +422,8 @@ class _DouaPageState extends State<DouaPage> {
                               Text(thikr.text, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: TextStyle(fontFamily: 'Amiri', fontSize: widget.type == ThikrType.khatm ? 24 : 20, height: 1.8, color: const Color(0xFF1F2937), fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500)),
                               const SizedBox(height: 16),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  Row(
-                                    children: [
-                                      TextButton.icon(
-                                        onPressed: () { setState(() => currentPlayingIndex = index); _speak(thikr.text); },
-                                        icon: Icon(isCurrentTTS ? Icons.pause_rounded : Icons.record_voice_over_rounded, size: 16),
-                                        label: const Text("Audio Robot", style: TextStyle(fontSize: 11)),
-                                        style: TextButton.styleFrom(foregroundColor: Colors.grey[400]),
-                                      ),
-                                    ],
-                                  ),
-                                  // Repetition Counter
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
@@ -549,8 +460,7 @@ class _DouaPageState extends State<DouaPage> {
             ],
           ),
           
-          // Floating Caption Bar (Persistent Follow-Along)
-          if (isRecitationPlaying || isPlayingTTS)
+          if (isRecitationPlaying)
             Positioned(
               bottom: 100,
               left: 20,
@@ -658,29 +568,15 @@ class _DouaPageState extends State<DouaPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Play/Pause matching the main state
               IconButton(
                 icon: Icon(
-                  (isRecitationPlaying || isPlayingTTS) ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                  isRecitationPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
                   color: gradient[0],
                   size: 40,
                 ),
-                onPressed: () {
-                  if (isPlayingTTS) {
-                    _stopAll();
-                  } else {
-                    // Optimistic update
-                    if (isRecitationPlaying) {
-                      setState(() => isRecitationPlaying = false);
-                      recitationPlayer.pause();
-                    } else {
-                      _playRecitation();
-                    }
-                  }
-                },
+                onPressed: _playRecitation,
               ),
               const SizedBox(width: 20),
-              // Manual counter increment
               CircleAvatar(
                 radius: 20,
                 backgroundColor: gradient[0].withValues(alpha: 0.1),

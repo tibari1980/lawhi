@@ -20,6 +20,10 @@ class QuranAudioService {
   
   Ayah? get currentAyah => _currentAyah;
   bool get playing => _player.playing;
+  bool get hasNext => _player.hasNext;
+  bool get hasPrevious => _player.hasPrevious;
+  ProcessingState get processingState => _player.processingState;
+  Duration get position => _player.position;
 
   Future<void> init() async {
     if (!kIsWeb) {
@@ -103,6 +107,8 @@ class QuranAudioService {
   Future<void> stop() async => await _player.stop();
   Future<void> seek(Duration position) async => await _player.seek(position);
   Future<void> seekToIndex(int index) async => await _player.seek(Duration.zero, index: index);
+  Future<void> seekToNext() async => await _player.seekToNext();
+  Future<void> seekToPrevious() async => await _player.seekToPrevious();
 
   void dispose() {
     _player.dispose();

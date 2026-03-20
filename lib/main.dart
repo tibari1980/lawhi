@@ -191,33 +191,37 @@ class MainScaffold extends ConsumerWidget {
             children: pages,
           ),
           bottomNavigationBar: Padding(
-            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 24),
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(30),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                 child: Container(
-                  height: 75,
+                  height: 85, // Slightly taller for better spacing
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    // Increased opacity for better contrast (Accessibility)
+                    color: Colors.white.withValues(alpha: 0.94),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
+                    border: Border.all(
+                      color: AppTheme.emeraldGreen.withValues(alpha: 0.2), 
+                      width: 2.0 // Stronger border
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 20,
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 25,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildCustomNavItem(context, ref, 0, Icons.home_rounded, 'الرئيسية', ''),
-                      _buildCustomNavItem(context, ref, 1, Icons.menu_book_rounded, 'السور', '114'),
-                      _buildCustomNavItem(context, ref, 2, Icons.format_list_bulleted_rounded, 'الأحزاب', '60'),
-                      _buildCustomNavItem(context, ref, 3, Icons.search_rounded, 'البحث', ''),
-                      _buildCustomNavItem(context, ref, 4, Icons.settings_rounded, 'الإعدادات', ''),
+                      _buildCustomNavItem(context, ref, 0, Icons.home_rounded, 'الرئيسية', '', AppTheme.emeraldGreen),
+                      _buildCustomNavItem(context, ref, 1, Icons.menu_book_rounded, 'السور', '114', AppTheme.richGold),
+                      _buildCustomNavItem(context, ref, 2, Icons.format_list_bulleted_rounded, 'الأحزاب', '60', Colors.indigo.shade700),
+                      _buildCustomNavItem(context, ref, 3, Icons.search_rounded, 'البحث', '', Colors.deepOrangeAccent),
+                      _buildCustomNavItem(context, ref, 4, Icons.settings_rounded, 'الإعدادات', '', Colors.blueGrey.shade700),
                     ],
                   ),
                 ),
@@ -432,15 +436,20 @@ class MainScaffold extends ConsumerWidget {
     );
   }
 
-  Widget _buildCustomNavItem(BuildContext context, WidgetRef ref, int index, IconData icon, String label, String badge) {
+  Widget _buildCustomNavItem(BuildContext context, WidgetRef ref, int index, IconData icon, String label, String badge, Color selectedColor) {
     final currentIndex = ref.watch(navigationProvider);
     bool isSelected = currentIndex == index;
+    
+    // Accessibility: High contrast colors for visually impaired
+    final Color unselectedColor = Colors.grey.shade600;
+    final Color activeColor = isSelected ? selectedColor : unselectedColor;
+    
     String semanticLabel = label;
     if (badge.isNotEmpty) {
       semanticLabel += ', $badge elements';
     }
     if (isSelected) {
-      semanticLabel += ', Selected';
+      semanticLabel += ', Sélectionné';
     }
 
     return Semantics(
@@ -452,51 +461,79 @@ class MainScaffold extends ConsumerWidget {
           HapticFeedback.lightImpact();
           ref.read(navigationProvider.notifier).state = index;
         },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon, 
-                  size: 28, 
-                  color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade400
-                ),
-                if (badge.isNotEmpty)
-                  Positioned(
-                    top: -5,
-                    right: -10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.emeraldGreen,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Text(
-                        badge,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+        // Increased padding for better touch targets (Accessibility)
+        splashColor: selectedColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: Icon(
+                      icon, 
+                      size: isSelected ? 32 : 30, // Slightly larger for better visibility
+                      color: activeColor,
+                    ),
+                  ),
+                  if (badge.isNotEmpty)
+                    Positioned(
+                      top: -6,
+                      right: -12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: selectedColor, // Match the item's theme color
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: selectedColor.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          badge,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Amiri',
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppTheme.emeraldGreen : Colors.grey.shade400,
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Amiri',
+                  fontSize: 13,
+                  letterSpacing: 0.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: activeColor,
+                ),
+              ),
+              // ACTIVE INDICATOR: A small pill/dot below the text
+              const SizedBox(height: 4),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: isSelected ? 16 : 0,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: selectedColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
