@@ -7,6 +7,7 @@ import '../../core/navigation_provider.dart';
 import '../../core/user_progress_provider.dart';
 import '../mushaf/mushaf_view.dart';
 import '../doua/doua_page.dart';
+import '../sadaqa_jariya/sadaqa_jariya_view.dart';
 
 class HomeView extends ConsumerWidget {
   const HomeView({super.key});
@@ -49,6 +50,15 @@ class HomeView extends ConsumerWidget {
                   Expanded(child: _buildLastReadMiniCard(context, lastRead)),
                 ],
               ),
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildSadaqaJariyaCta(context),
             ),
           ),
 
@@ -226,86 +236,89 @@ class HomeView extends ConsumerWidget {
         final currentAyah = ref.watch(currentPlayingAyahProvider);
         final bool isThisVersePlaying = currentAyah?.number == ayah.number && isPlayingOptimistic;
         
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppTheme.emeraldGreen.withValues(alpha: 0.9), AppTheme.emeraldGreen],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.emeraldGreen.withValues(alpha: 0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+        return Semantics(
+          label: 'Verse of the Day: ${ayah.surahName}. Text: ${ayah.text}',
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.emeraldGreen.withValues(alpha: 0.9), AppTheme.emeraldGreen],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'آية اليوم',
-                    style: const TextStyle(
-                      fontFamily: 'Amiri',
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const Icon(Icons.star_rounded, color: Colors.white70, size: 20),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                ayah.text,
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Amiri',
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  height: 1.6,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.emeraldGreen.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildModernActionBtn(
-                    isThisVersePlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, 
-                    isThisVersePlaying ? 'إيقاف' : 'استماع', 
-                    () {
-                      HapticFeedback.mediumImpact();
-                      if (currentAyah?.number == ayah.number) {
-                        ref.read(currentPlayingAyahProvider.notifier).togglePlayPause();
-                      } else {
-                        ref.read(currentPlayingAyahProvider.notifier).playAyah(ayah);
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'آية اليوم',
+                      style: const TextStyle(
+                        fontFamily: 'Amiri',
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const Icon(Icons.star_rounded, color: Colors.white70, size: 20),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  ayah.text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Amiri',
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildModernActionBtn(
+                      isThisVersePlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, 
+                      isThisVersePlaying ? 'إيقاف' : 'استماع', 
+                      () {
+                        HapticFeedback.mediumImpact();
+                        if (currentAyah?.number == ayah.number) {
+                          ref.read(currentPlayingAyahProvider.notifier).togglePlayPause();
+                        } else {
+                          ref.read(currentPlayingAyahProvider.notifier).playAyah(ayah);
+                        }
                       }
-                    }
-                  ),
-                  const SizedBox(width: 16),
-                  _buildModernActionBtn(
-                    Icons.auto_stories_rounded, 
-                    'قراءة', 
-                    () async {
-                      // Immediate navigation
-                      final startThumun = (ayah.hizbQuarter - 1) * 2 + 1;
-                      ref.read(currentThumunIndexProvider.notifier).state = startThumun;
-                      ref.read(targetAyahGlobalNumberProvider.notifier).state = ayah.number;
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MushafView()));
-                    }
-                  ),
-                ],
-              ),
-            ],
+                    ),
+                    const SizedBox(width: 16),
+                    _buildModernActionBtn(
+                      Icons.auto_stories_rounded, 
+                      'قراءة', 
+                      () async {
+                        // Immediate navigation
+                        ref.read(targetAyahGlobalNumberProvider.notifier).state = ayah.number;
+                        ref.read(selectedSurahNumberProvider.notifier).state = ayah.surahNumber;
+                        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MushafView())).then((_) {
+                          ref.read(selectedSurahNumberProvider.notifier).state = null;
+                          ref.read(targetAyahGlobalNumberProvider.notifier).state = null;
+                        });
+                      }
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -433,6 +446,72 @@ class HomeView extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontFamily: 'Amiri', fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSadaqaJariyaCta(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const SadaqaJariyaView()));
+      },
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.emeraldGreen.withValues(alpha: 0.15),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.favorite_rounded, color: AppTheme.premiumGold, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'صدقة جارية',
+                    style: TextStyle(
+                      fontFamily: 'Amiri',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'في ذكرى الوالد زروال محمد رحمه الله',
+                    style: TextStyle(
+                      fontFamily: 'Amiri',
+                      fontSize: 14,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 16),
           ],
         ),
       ),

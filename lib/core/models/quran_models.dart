@@ -122,6 +122,38 @@ class Ayah {
       'sajda': sajda,
     };
   }
+
+  Ayah copyWith({
+    int? number,
+    String? text,
+    String? translation,
+    String? phonetics,
+    int? numberInSurah,
+    int? juz,
+    int? manzil,
+    int? page,
+    int? ruku,
+    int? hizbQuarter,
+    int? surahNumber,
+    String? surahName,
+    int? sajda,
+  }) {
+    return Ayah(
+      number: number ?? this.number,
+      text: text ?? this.text,
+      translation: translation ?? this.translation,
+      phonetics: phonetics ?? this.phonetics,
+      numberInSurah: numberInSurah ?? this.numberInSurah,
+      juz: juz ?? this.juz,
+      manzil: manzil ?? this.manzil,
+      page: page ?? this.page,
+      ruku: ruku ?? this.ruku,
+      hizbQuarter: hizbQuarter ?? this.hizbQuarter,
+      surahNumber: surahNumber ?? this.surahNumber,
+      surahName: surahName ?? this.surahName,
+      sajda: sajda ?? this.sajda,
+    );
+  }
 }
 
 class Hizb {

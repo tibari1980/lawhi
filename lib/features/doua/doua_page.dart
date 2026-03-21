@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
+import '../../core/utils/io_utils.dart';
 import 'package:path/path.dart' as p;
 import '../../core/app_theme.dart';
 import '../../core/models/doua_content.dart';
@@ -49,7 +49,10 @@ class _DouaPageState extends State<DouaPage> {
 
   void _scrollToIndex(int index) {
     if (!_scrollController.hasClients) return;
-    if (activeThikrIndex == index) return;
+    if (activeThikrIndex == index && _scrollController.hasClients && _scrollController.offset > 0) {
+      // If we're already at this index but not at the top, we might still want to scroll
+      // However, for automation, we usually set the state then call this.
+    }
     
     setState(() => activeThikrIndex = index);
     
@@ -164,13 +167,6 @@ class _DouaPageState extends State<DouaPage> {
       case ThikrType.masaa: return [const Color(0xFF312E81), const Color(0xFF1E1B4B)];
       case ThikrType.khatm: return [AppTheme.emeraldGreen, const Color(0xFF014737)];
     }
-  }
-
-  Future<void> _stopRecitation() async {
-    try {
-      await recitationPlayer.stop();
-    } catch (_) {}
-    if (mounted) setState(() => isRecitationPlaying = false);
   }
 
   bool _isLoadingSource = false;
@@ -399,56 +395,67 @@ class _DouaPageState extends State<DouaPage> {
                           _scrollToIndex(index);
                           _incrementCount(index);
                         },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          margin: const EdgeInsets.only(bottom: 20),
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: isCurrent ? gradient[0].withValues(alpha: 0.6) : (isDone ? Colors.green.withValues(alpha: 0.3) : Colors.transparent), 
-                              width: 2
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: isCurrent ? gradient[0].withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.04), 
-                                blurRadius: 20, offset: const Offset(0, 8)
-                              )
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Text(thikr.text, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: TextStyle(fontFamily: 'Amiri', fontSize: widget.type == ThikrType.khatm ? 24 : 20, height: 1.8, color: const Color(0xFF1F2937), fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500)),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: isDone ? Colors.green.withValues(alpha: 0.1) : (isCurrent ? gradient[0].withValues(alpha: 0.1) : Colors.grey.shade100),
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        if (isDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
-                                        if (isDone) const SizedBox(width: 4),
-                                        Text(
-                                          '$count / ${thikr.count}',
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: isDone ? Colors.green : (isCurrent ? gradient[0] : Colors.grey[600]),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                        child: Semantics(
+                          label: 'Thikr: ${thikr.text}. Répétitions: $count sur ${thikr.count}',
+                          selected: isCurrent,
+                          button: true,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.only(bottom: 20),
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                color: isCurrent ? gradient[0].withValues(alpha: 0.6) : (isDone ? Colors.green.withValues(alpha: 0.3) : Colors.transparent), 
+                                width: 2
                               ),
-                            ],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isCurrent ? gradient[0].withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.04), 
+                                  blurRadius: 20, offset: const Offset(0, 8)
+                                ),
+                                if (isCurrent)
+                                  BoxShadow(
+                                    color: gradient[0].withValues(alpha: 0.1),
+                                    blurRadius: 30,
+                                    spreadRadius: 2,
+                                  ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Text(thikr.text, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: TextStyle(fontFamily: 'Amiri', fontSize: widget.type == ThikrType.khatm ? 24 : 20, height: 1.8, color: const Color(0xFF1F2937), fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500)),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: isDone ? Colors.green.withValues(alpha: 0.1) : (isCurrent ? gradient[0].withValues(alpha: 0.1) : Colors.grey.shade100),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          if (isDone) const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                                          if (isDone) const SizedBox(width: 4),
+                                          Text(
+                                            '$count / ${thikr.count}',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: isDone ? Colors.green : (isCurrent ? gradient[0] : Colors.grey[600]),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -503,9 +510,19 @@ class _DouaPageState extends State<DouaPage> {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.skip_previous_rounded),
-                onPressed: activeThikrIndex > 0 ? () => _scrollToIndex(activeThikrIndex - 1) : null,
+              Semantics(
+                label: 'Précédent',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(Icons.skip_previous_rounded),
+                  onPressed: activeThikrIndex > 0 ? () {
+                    final prevIndex = activeThikrIndex - 1;
+                    if (isRecitationPlaying && thikrs[prevIndex].startTime != null) {
+                      recitationPlayer.seek(thikrs[prevIndex].startTime!);
+                    }
+                    _scrollToIndex(prevIndex);
+                  } : null,
+                ),
               ),
               Expanded(
                 child: Column(
@@ -517,16 +534,29 @@ class _DouaPageState extends State<DouaPage> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontFamily: 'Amiri', fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                    Text(
-                      'Répétitions: $count / ${thikr.count}',
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: gradient[0]),
+                    Semantics(
+                      label: 'Progression: $count sur ${thikr.count}',
+                      child: Text(
+                        'Répétitions: $count / ${thikr.count}',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.bold, color: gradient[0]),
+                      ),
                     ),
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.skip_next_rounded),
-                onPressed: activeThikrIndex < thikrs.length - 1 ? () => _scrollToIndex(activeThikrIndex + 1) : null,
+              Semantics(
+                label: 'Suivant',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(Icons.skip_next_rounded),
+                  onPressed: activeThikrIndex < thikrs.length - 1 ? () {
+                    final nextIndex = activeThikrIndex + 1;
+                    if (isRecitationPlaying && thikrs[nextIndex].startTime != null) {
+                      recitationPlayer.seek(thikrs[nextIndex].startTime!);
+                    }
+                    _scrollToIndex(nextIndex);
+                  } : null,
+                ),
               ),
             ],
           ),
@@ -577,12 +607,16 @@ class _DouaPageState extends State<DouaPage> {
                 onPressed: _playRecitation,
               ),
               const SizedBox(width: 20),
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: gradient[0].withValues(alpha: 0.1),
-                child: IconButton(
-                  icon: Icon(Icons.add_rounded, color: gradient[0]),
-                  onPressed: () => _incrementCount(activeThikrIndex),
+              Semantics(
+                label: 'Augmenter le compteur',
+                button: true,
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: gradient[0].withValues(alpha: 0.1),
+                  child: IconButton(
+                    icon: Icon(Icons.add_rounded, color: gradient[0]),
+                    onPressed: () => _incrementCount(activeThikrIndex),
+                  ),
                 ),
               ),
             ],

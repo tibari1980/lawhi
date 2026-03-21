@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
@@ -404,14 +405,18 @@ final surahsProvider = FutureProvider<List<Surah>>((ref) async {
 
 final surahAyahsProvider = FutureProvider.family<List<Ayah>, int>((ref, surahNumber) async {
   final service = ref.watch(quranServiceProvider);
-  final riwaya = ref.watch(settingsProvider.select((s) => s.riwaya));
-  return service.getSurahAyahs(surahNumber, riwaya);
+  final settings = ref.watch(settingsProvider);
+  final riwaya = settings.riwaya;
+  final includePhonetics = settings.showPhonetics;
+  return service.getSurahAyahs(surahNumber, riwaya, includePhonetics: includePhonetics);
 });
 
 final hizbQuarterAyahsProvider = FutureProvider.family<List<Ayah>, int>((ref, quarterNumber) async {
   final service = ref.watch(quranServiceProvider);
-  final riwaya = ref.watch(settingsProvider.select((s) => s.riwaya));
-  return service.getHizbQuarterAyahs(quarterNumber, riwaya);
+  final settings = ref.watch(settingsProvider);
+  final riwaya = settings.riwaya;
+  final includePhonetics = settings.showPhonetics;
+  return service.getHizbQuarterAyahs(quarterNumber, riwaya, includePhonetics: includePhonetics);
 });
 
 final thumunAyahsProvider = FutureProvider.family<List<Ayah>, int>((ref, thumunIndex) async {
@@ -447,16 +452,40 @@ final favoritesCountProvider = StateProvider<int>((ref) => 5);
 
 final featuredAyahProvider = FutureProvider<Ayah>((ref) async {
   final service = ref.watch(quranServiceProvider);
+  final now = DateTime.now();
+  final isFriday = now.weekday == DateTime.friday;
+  
+  // Create a stable daily seed to keep the same verse all day
+  final seed = now.year * 1000 + now.month * 100 + now.day;
+  final random = Random(seed);
+
   try {
-    // Default to Ayat al-Kursi (Global Number 262)
+    if (isFriday) {
+      // Pick from Surah Al-Kahf (18) on Fridays
+      final surah18 = await service.getSurahAyahs(18, Riwaya.hafs);
+      if (surah18.isNotEmpty) {
+        return surah18[random.nextInt(surah18.length)];
+      }
+    }
+
+    // Otherwise, pick a random ayah from the entire Quran (Global 1 to 6236)
+    // We aim for a "premium" length (100-500 chars) to match the UI card space.
+    for (int i = 0; i < 5; i++) {
+      final globalNumber = random.nextInt(6236) + 1;
+      final ayah = await service.getAyahByGlobalNumber(globalNumber);
+      if (ayah != null && ayah.text.length >= 100 && ayah.text.length <= 500) {
+        return ayah;
+      }
+    }
+
+    // Default to Ayat al-Kursi (Global Number 262) or Al-Fatiha
     final ayah = await service.getAyahByGlobalNumber(262);
     if (ayah != null) return ayah;
     
-    // Fallback to Al-Fatiha Ayah 1 (Global 1) if not found
     final fallback = await service.getAyahByGlobalNumber(1);
     return fallback!;
   } catch (e) {
-    // Ultimate hardcoded fallback to ensure no crash
+    debugPrint('featuredAyahProvider error: $e');
     return Ayah(
       number: 1, 
       text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', 

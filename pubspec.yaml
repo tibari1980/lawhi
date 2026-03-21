@@ -67,6 +67,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/quran/ara-quran.json
+    - assets/quran/en-transliteration.json
     - assets/fonts/
 
   fonts:

@@ -168,35 +168,36 @@ class _MushafPageState extends ConsumerState<MushafPage> {
                 
                 // Body
                 Expanded(
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 150),
-                      child: Column(
-                        children: [
-                          Consumer(
-                            builder: (context, ref, child) {
-                              // We watch currentPlayingAyah here to highlight the active verse
-                              final playingAyah = ref.watch(currentPlayingAyahProvider)?.number;
-                              return RichText(
-                                textAlign: TextAlign.justify,
-                                textDirection: TextDirection.rtl,
-                                text: TextSpan(
-                                  children: _buildVerses(settings, playingAyah),
-                                  style: TextStyle(
-                                    fontFamily: 'Amiri',
-                                    fontSize: settings.fontSize,
-                                    height: 2.2,
-                                    color: settings.backgroundColor.computeLuminance() > 0.5 
-                                        ? const Color(0xFF1F2937) : Colors.white,
+                  child: RepaintBoundary(
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 150),
+                        child: Column(
+                          children: [
+                            Consumer(
+                              builder: (context, ref, child) {
+                                final playingAyah = ref.watch(currentPlayingAyahProvider)?.number;
+                                return RichText(
+                                  textAlign: TextAlign.justify,
+                                  textDirection: TextDirection.rtl,
+                                  text: TextSpan(
+                                    children: _buildVerses(settings, playingAyah),
+                                    style: TextStyle(
+                                      fontFamily: 'Amiri',
+                                      fontSize: settings.fontSize,
+                                      height: 2.2,
+                                      color: settings.backgroundColor.computeLuminance() > 0.5 
+                                          ? const Color(0xFF1F2937) : Colors.white,
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                          _buildEndSeparator(widget.thumunIndex),
-                        ],
+                                );
+                              },
+                            ),
+                            _buildEndSeparator(widget.thumunIndex),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -398,25 +399,8 @@ class _MushafPageState extends ConsumerState<MushafPage> {
           style: TextStyle(fontFamily: 'Inter', fontSize: settings.fontSize * 0.5, color: AppTheme.richGold.withValues(alpha: 0.9), fontStyle: FontStyle.italic),
         ));
       }
-
-      if (settings.showTranslation && ayah.translation != null) {
-        final translations = ayah.translation!.split('|||');
-        String translationText = '';
-        if (settings.translationLanguage == 'Français' && translations.isNotEmpty) {
-          translationText = translations[0];
-        } else if (settings.translationLanguage == 'English' && translations.length > 1) {
-          translationText = translations[1];
-        }
-
-        if (translationText.isNotEmpty) {
-          spans.add(TextSpan(
-            text: '\n$translationText\n',
-            style: TextStyle(fontFamily: 'Inter', fontSize: settings.fontSize * 0.55, color: settings.backgroundColor.computeLuminance() > 0.5 ? Colors.black54 : Colors.white70, height: 1.5),
-          ));
-        }
-      }
       
-      if (settings.showTranslation || settings.showPhonetics) {
+      if (settings.showPhonetics) {
         spans.add(const TextSpan(text: '\n'));
       }
     }

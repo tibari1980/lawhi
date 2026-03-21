@@ -8,8 +8,6 @@ class AppSettings {
   final double scrollSpeed;
   final Color backgroundColor;
   final String language;
-  final bool showTranslation;
-  final String translationLanguage; // 'Français', 'English', 'None'
   final bool showPhonetics;
   final Riwaya riwaya;
 
@@ -18,8 +16,6 @@ class AppSettings {
     required this.scrollSpeed,
     required this.backgroundColor,
     required this.language,
-    required this.showTranslation,
-    required this.translationLanguage,
     required this.showPhonetics,
     required this.riwaya,
   });
@@ -29,8 +25,6 @@ class AppSettings {
     double? scrollSpeed,
     Color? backgroundColor,
     String? language,
-    bool? showTranslation,
-    String? translationLanguage,
     bool? showPhonetics,
     Riwaya? riwaya,
   }) {
@@ -39,8 +33,6 @@ class AppSettings {
       scrollSpeed: scrollSpeed ?? this.scrollSpeed,
       backgroundColor: backgroundColor ?? this.backgroundColor,
       language: language ?? this.language,
-      showTranslation: showTranslation ?? this.showTranslation,
-      translationLanguage: translationLanguage ?? this.translationLanguage,
       showPhonetics: showPhonetics ?? this.showPhonetics,
       riwaya: riwaya ?? this.riwaya,
     );
@@ -54,8 +46,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   static const String _keyScrollSpeed = 'scrollSpeed';
   static const String _keyBackgroundColor = 'backgroundColor';
   static const String _keyLanguage = 'language';
-  static const String _keyShowTranslation = 'showTranslation';
-  static const String _keyTranslationLanguage = 'translationLanguage';
   static const String _keyShowPhonetics = 'showPhonetics';
   static const String _keyRiwaya = 'riwaya';
 
@@ -65,8 +55,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
           scrollSpeed: _prefs.getDouble(_keyScrollSpeed) ?? 10.0,
           backgroundColor: Color(_prefs.getInt(_keyBackgroundColor) ?? 0xFF0F172A),
           language: _prefs.getString(_keyLanguage) ?? 'العربية',
-          showTranslation: _prefs.getBool(_keyShowTranslation) ?? false,
-          translationLanguage: _prefs.getString(_keyTranslationLanguage) ?? 'None',
           showPhonetics: _prefs.getBool(_keyShowPhonetics) ?? false,
           riwaya: Riwaya.values.firstWhere(
             (r) => r.name == _prefs.getString(_keyRiwaya),
@@ -94,19 +82,6 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     _prefs.setString(_keyLanguage, lang);
   }
 
-  void setShowTranslation(bool show) {
-    state = state.copyWith(showTranslation: show);
-    _prefs.setBool(_keyShowTranslation, show);
-  }
-
-  void setTranslationLanguage(String lang) {
-    state = state.copyWith(
-      translationLanguage: lang,
-      showTranslation: lang != 'None',
-    );
-    _prefs.setString(_keyTranslationLanguage, lang);
-    _prefs.setBool(_keyShowTranslation, lang != 'None');
-  }
 
   void setShowPhonetics(bool show) {
     state = state.copyWith(showPhonetics: show);

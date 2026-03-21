@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/app_theme.dart';
 import '../../core/settings_provider.dart';
 import '../../core/models/quran_models.dart';
+import '../sadaqa_jariya/sadaqa_jariya_view.dart';
 
 class SettingsView extends ConsumerStatefulWidget {
   final bool showAppBar;
@@ -83,15 +85,32 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                     color: settings.backgroundColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                    'فَأَسْقَيْنَاكُمُوهُ...',
-                    textAlign: TextAlign.center,
-                    textDirection: TextDirection.rtl,
-                    style: TextStyle(fontFamily: 'Amiri',
-                      fontSize: settings.fontSize * 0.7,
-                      color: settings.backgroundColor == const Color(0xFFF1F5F9) ? Colors.black : Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'فَأَسْقَيْنَاكُمُوهُ...',
+                        textAlign: TextAlign.center,
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(fontFamily: 'Amiri',
+                          fontSize: settings.fontSize * 0.7,
+                          color: settings.backgroundColor.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (settings.showPhonetics) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          '[ Fa\'asqaynakumuhu ]',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: (settings.fontSize * 0.7) * 0.5,
+                            color: AppTheme.richGold,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -160,18 +179,6 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                 ),
                 
                 const SizedBox(height: 25),
-                const Text('إضافة الترجمة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                _buildRadioGroup<String>(
-                  options: ['English', 'Français', 'لا'],
-                  currentValue: settings.translationLanguage == 'None' ? 'لا' : settings.translationLanguage,
-                  onChanged: (v) {
-                    final lang = v == 'لا' ? 'None' : v!;
-                    ref.read(settingsProvider.notifier).setTranslationLanguage(lang);
-                  },
-                ),
-                
-                const SizedBox(height: 25),
                 const Text('add phonetics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 _buildRadioGroup<bool>(
@@ -179,6 +186,42 @@ class _SettingsViewState extends ConsumerState<SettingsView> {
                   labels: ['Yes', 'No'],
                   currentValue: settings.showPhonetics,
                   onChanged: (v) => ref.read(settingsProvider.notifier).setShowPhonetics(v!),
+                ),
+              ],
+            ),
+          ),
+          // About / Sadaqa Jariya Section
+          _buildCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildSectionTitle('عن التطبيق'),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'صدقة جارية',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontFamily: 'Amiri', fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text(
+                    'في ذكرى الوالد زروال محمد رحمه الله',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontFamily: 'Amiri', fontSize: 14, color: Colors.grey),
+                  ),
+                  leading: const Icon(Icons.arrow_back_ios, size: 16, color: Colors.grey),
+                  trailing: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.emeraldGreen.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.favorite_rounded, color: AppTheme.premiumGold, size: 24),
+                  ),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SadaqaJariyaView()));
+                  },
                 ),
               ],
             ),
